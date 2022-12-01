@@ -82,7 +82,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_roles_id'), 'roles', ['id'], unique=True)
-    op.create_table('ticker_classes',
+    op.create_table('ticket_classes',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name_ru', sa.String(length=255), nullable=False),
     sa.Column('name_en', sa.String(length=255), nullable=True),
@@ -135,7 +135,7 @@ def upgrade() -> None:
     op.create_table('users',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
-    sa.Column('hashed_password', sa.String(length=255), nullable=False),
+    sa.Column('password', sa.String(length=255), nullable=False),
     sa.Column('username', sa.String(length=50), nullable=True),
     sa.Column('phone', sa.String(length=20), nullable=True),
     sa.Column('is_superuser', sa.Boolean(), nullable=True),

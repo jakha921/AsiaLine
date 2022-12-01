@@ -3,7 +3,7 @@ from datetime import datetime
 
 
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Date
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Date, Float
 
 
 from db.database import Base
@@ -34,7 +34,7 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
     email = Column(String(255), nullable=False, unique=True)
-    hashed_password = Column(String(255), nullable=False)
+    password = Column(String(255), nullable=False)
     username = Column(String(50), index=True)
     phone = Column(String(20), nullable=True)
     is_superuser = Column(Boolean, default=False)
@@ -271,6 +271,9 @@ class Passenger(Base):
     password = Column(String(255), nullable=False)
     platform = Column(Enum('web', 'ios', 'android', name='Platform'), default='web')
     language = Column(Enum('ru', 'en', 'uz', name='Language'), default='ru')
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
     
     def __repr__(self):
         return f"Passenger(id={self.id}, login={self.login})"
@@ -289,8 +292,8 @@ class Gender(Base):
         return f"Gender(id={self.id}, gender={self.gender_ru})"
 
 
-class TickerClass(Base):
-    __tablename__ = 'ticker_classes'
+class TicketClass(Base):
+    __tablename__ = 'ticket_classes'
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name_ru = Column(String(255), nullable=False)
@@ -388,3 +391,12 @@ class Transaction(Base):
     def __repr__(self):
         return f"Transaction(id={self.id}, passenger={self.passenger}, ticket={self.ticket}, payment_system={self.payment_system}, status={self.status})"
 
+
+class CurrencyRate(Base):
+    __tablename__ = 'currency_rates'
+    
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    rub_to_usd = Column(Float, default=0)
+    rub_to_eur = Column(Float, default=0)
+    rub_to_uzs = Column(Float, default=0)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

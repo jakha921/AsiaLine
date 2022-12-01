@@ -17,13 +17,14 @@ def register(auth: AuthToken):
     return {'message': 'User created successfully'}
 
 @router.post("/login")
+# checkout db and return user token
 def login(auth: AuthToken):
-    user_ = [x for x in user if x['username'] == auth.username]
-    if not user_:
+    user = [x for x in user if x['username'] == auth.username]
+    if not user:
         raise HTTPException(status_code=404, detail='User not found')
-    if not auth_handler.verify_password(auth.password, user_[0]['password']):
-        raise HTTPException(status_code=400, detail='Incorrect password')
-    return {'access_token': auth_handler.encode_token(auth.username)}
+    if not auth_handler.verify_password(auth.password, user[0]['password']):
+        raise HTTPException(status_code=404, detail='Incorrect password')
+    return {'access_token': auth_handler.encode_token(user[0]['username']), 'token_type': 'bearer'}
 
 @router.get("/unprotected")
 def unprotected():
