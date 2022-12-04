@@ -10,9 +10,6 @@ from db.database import SessionLocal
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
 
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):
@@ -27,8 +24,8 @@ async def db_session_middleware(request: Request, call_next):
 
 
 # include router
-# app.include_router(jwt_router, prefix="/jwt", tags=["jwt"])
-# app.include_router(app_router, prefix="", tags=["users"])
-# app.include_router(crud_router, prefix="", tags=["crud"])
+app.include_router(jwt_router, prefix="/jwt", tags=["jwt"])
+app.include_router(app_router, prefix="", tags=["users"])
+app.include_router(crud_router, prefix="", tags=["crud"])
 app.include_router(logics_router, prefix="", tags=["main"])
 

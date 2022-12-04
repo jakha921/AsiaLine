@@ -253,7 +253,7 @@ class Booking(Base):
     actor = relationship("User", backref="bookings")
     
     def __repr__(self):
-        return f"Booking(id={self.id}, flight_id={self.flight_id}, user_id={self.user_id}), agent_id={self.agent_id})"
+        return f"Booking(id={self.id}, flight_id={self.flight_id}, actor_id={self.actor_id}), agent_id={self.agent_id})"
 
 
 class Platform(str, Enum):
@@ -303,8 +303,19 @@ class TicketClass(Base):
     description = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"TickerClass(id={self.id}, name={self.name})"
+        return f"TicketClass(id={self.id}, name={self.name})"
 
+
+class TicketStatus(Base):
+    __tablename__ = 'ticket_statuses'
+    
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    name_ru = Column(String(255), nullable=False)
+    name_en = Column(String(255), nullable=True)
+    name_uz = Column(String(255), nullable=True)
+
+    def __repr__(self):
+        return f"TicketStatus(id={self.id}, name={self.name_ru})"
 
 class Ticket(Base):
     __tablename__ = "tickets"
@@ -320,23 +331,27 @@ class Ticket(Base):
     gender_id = Column(Integer, ForeignKey('genders.id'), nullable=False)
     passport = Column(String(10), nullable=False)
     citizenship = Column(Integer, ForeignKey('countries.id'), nullable=False)
-    class_id = Column(Integer, ForeignKey('ticker_classes.id'), nullable=False)
+    class_id = Column(Integer, ForeignKey('ticket_classes.id'), nullable=False)
     price = Column(Integer, default=0)
     currency = Column(Enum('RUB', 'USD', 'EUR', 'UZS', name='CurrencyCode'), default='RUB')
     discount_id = Column(Integer, ForeignKey('discounts.id'), nullable=True)
     comment = Column(String(255), nullable=True)
     taking_amount = Column(Integer, default=0)  # Сумма, которую берет агент/кассир/бронзировщик за бронирование
     luggage = Column(Integer, default=0)
+    platform = Column(Enum('web', 'ios', 'android', name='Platform'), default='web')
+    status_id = Column(Integer, ForeignKey('ticket_statuses.id'), nullable=False)
     actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
     
     flight = relationship("Flight", backref="tickets")
     agent = relationship("Agent", backref="tickets")
     passenger = relationship("Passenger", backref="tickets")
     gender = relationship("Gender", backref="tickets")
-    class_ = relationship("TickerClass", backref="tickets")
+    class_ = relationship("TicketClass", backref="tickets")
     discount = relationship("Discount", backref="tickets")
+    status = relationship("TicketStatus", backref="tickets")
     actor = relationship("User", backref="tickets")
     
     def __repr__(self):

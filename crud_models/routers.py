@@ -47,7 +47,7 @@ async def delete_country(country_id: int, db: Session = Depends(get_db)):
     return crud.Country.delete(db, country_id)
 
 
-#? City start
+#? City
 # get cities
 @routers.get("/cities")
 async def get_cities(min: Optional[int] = 0, max: Optional[int] = 10, db: Session = Depends(get_db)):
@@ -157,3 +157,16 @@ async def delete_flight(flight_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight not found")
     return crud.Flight.delete(db, db_flight.id)
 
+#? Flight Price History
+# get flight price histories
+# @routers.get("/flight_price_histories", response_model=list[schemas.FlightPriceHistory])
+# async def get_flight_price_histories(min: Optional[int] = 0, max: Optional[int] = 10, db: Session = Depends(get_db)):
+#     return crud.FlightPriceHistory.get_list(db, min, max)
+
+# # get flight price history by id
+# @routers.get("/flight_price_history/{flight_price_history_id}", response_model=schemas.FlightPriceHistory)
+# async def get_flight_price_history(flight_price_history_id: int, db: Session = Depends(get_db)):
+#     db_flight_price_history = crud.FlightPriceHistory.get_by_id(db, flight_price_history_id)
+#     if db_flight_price_history is None:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight price history not found")
+#     return db_flight_price_history
