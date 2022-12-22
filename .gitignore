@@ -2,5 +2,4 @@ __pycache__
 db_faker.py
 config.py
 venv
-.env
-config_example.py
+env
