@@ -16,7 +16,6 @@ migrate:
     ./$(VENV)/bin/alembic upgrade head
 
 
-
 run: venv
 	./$(VENV)/bin/uvicorn main:app --reload
 
