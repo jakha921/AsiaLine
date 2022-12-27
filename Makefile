@@ -11,6 +11,11 @@ $(VENV)/bin/activate: requirements.txt
 # venv is a shortcut target
 venv: $(VENV)/bin/activate
 
+# migrate the database with alembic
+migrate:
+    ./$(VENV)/bin/alembic upgrade head
+
+
 run: venv
 	./$(VENV)/bin/uvicorn main:app --reload
 
