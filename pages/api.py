@@ -21,11 +21,12 @@ def add_time(from_date, to_date):
 def update_currency_rate(db: Session):
     """ get currency rate from api and update currency rate """
     currency_rate = get_currency_rate()
+    print(currency_rate)
     db_currency_rate = models.CurrencyRate(
         rub_to_usd=currency_rate['RUBUSD'],
         rub_to_eur=currency_rate['RUBEUR'],
         rub_to_uzs=currency_rate['RUBUZS'],
-        updated_at=currency_rate['update_at']
+        updated_at=currency_rate['updated_at']
     )
     db.add(db_currency_rate)
     db.commit()

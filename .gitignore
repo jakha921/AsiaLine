@@ -3,3 +3,4 @@ db_faker.py
 config.py
 venv
 .env
+config_example.py

@@ -12,20 +12,19 @@ def get_currency_rate():
         # "apikey": "22335c1a-1b91f2b7-78eaf94b-106bb131"
     }
 
-    response = requests.request("GET", url, headers=headers, data = payload)
+    response = requests.request("GET", url, headers=headers, data=payload)
     result = response.json()
 
     rate = result["quotes"]
+    rate["updated_at"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    # rate =[(result['base']+key, round(value, 6)) for key, value in result['result'].items()]
-    # rate = dict(rate)
-    # # add date
-    date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    return {'currency_rate': rate, 'update_at': date}
+    return rate
 
 # {'currency_rate': {'RUBUSD': 0.014183, 'RUBEUR': 0.013353, 'RUBUZS': 160.26984}, 'update_at': '2022-12-21 01:01:01'}
 
+
+cur = get_currency_rate()
+print(cur['RUBUSD'])
 
 
 

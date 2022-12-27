@@ -26,8 +26,8 @@ async def db_session_middleware(request: Request, call_next):
 # include router
 # app.include_router(jwt_router, prefix="/jwt", tags=["jwt"])
 app.include_router(app_router, prefix="", tags=["users"])
-app.include_router(crud_router, prefix="", tags=["crud"])
-app.include_router(logics_router, prefix="", tags=["main"])
+app.include_router(crud_router, prefix="", tags=["cruds"])
+app.include_router(logics_router, prefix="", tags=["pages"])
 
 
 if __name__ == "__main__":

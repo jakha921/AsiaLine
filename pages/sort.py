@@ -267,11 +267,11 @@ def sorted_agents(agents):
 
             agent_dict = {
                 "id": agent.id,
-                "name": agent.name,
+                "name": agent.company_name,
                 "discount": {
                     "id": discount.id,
-                    "formula": discount.formula,
-                    "description": discount.description,
+                    "formula": discount.amount,
+                    "description": discount.name,
                 }
             }
 
