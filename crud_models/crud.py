@@ -1,3 +1,5 @@
+import random
+
 from crud_models import schemas
 from db import models
 
@@ -120,89 +122,6 @@ class Airport:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-class Flight:
-    def get_list(db: Session, min: Optional[int], max: Optional[int]):
-        try:
-            if min and max:
-                return db.query(models.Flight). \
-                    filter(models.Flight.deleted_at == None,
-                           models.Flight.departure_date >= datetime.now()). \
-                    order_by(models.Flight.departure_date). \
-                    offset(min).limit(max).all()
-            return db.query(models.Flight). \
-                filter(models.Flight.deleted_at == None,
-                       models.Flight.departure_date >= datetime.now()). \
-                order_by(models.Flight.departure_date).all()
-        except Exception as e:
-            print(e)
-
-    def get_by_id(db: Session, flight_id: int):
-        return db.query(models.Flight).filter(models.Flight.id == flight_id).first()
-
-    def create(db: Session, flight: schemas.FlightCreate):
-        db_flight = models.Flight(**flight.dict())
-        db_flight.left_seats = flight.total_seats
-        db.add(db_flight)
-        db.commit()
-        db.refresh(db_flight)
-        return db_flight
-
-    def update(db: Session, flight_id: int, flight: schemas.FlightUpdate):
-        db_flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
-        for key, value in flight.dict().items():
-            if value is not None:
-                setattr(db_flight, key, value)
-        db.commit()
-        return db_flight
-
-    def delete(db: Session, flight_id: int):
-        try:
-            db_flight = db.query(models.Flight, models.Ticket, models.Booking). \
-                filter(
-                models.Flight.id == flight_id,
-                models.Ticket.flight_id == flight_id,
-                models.Booking.flight_id == flight_id,
-            ).first()
-
-            flight = db_flight["Flight"]
-            ticket = db_flight["Ticket"]
-            booking = db_flight["Booking"]
-
-            if ticket:
-                return {'message': 'Flight has tickets'}
-            if booking:
-                return {'message': 'Flight has been booked'}
-            if flight is None:
-                return {'message': 'Flight not found'}
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight not found",
-                                    message="Flight not found")
-            if flight.deleted_at is None:
-                flight.deleted_at = datetime.now()
-            else:
-                return {"message": "Flight already deleted"}
-            db.commit()
-            return {"message": "Flight deleted successfully"}
-        except Exception as e:
-            print(logging.error(traceback.format_exc()))
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-
-    def get_flight_tickets(db: Session, flight_id: int):
-        return db.query(models.Ticket).filter(models.Ticket.flight_id == flight_id).all()
-
-    def set_on_sale_now(db: Session, flight_id: int, on_sale: bool = False):
-        try:
-            db_flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
-            if db_flight is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight not found")
-            if on_sale:
-                db_flight.on_sale = datetime.now()
-            db.commit()
-            return db_flight
-        except Exception as e:
-            print(logging.error(traceback.format_exc()))
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
-
-
 class FlightPriceHistory:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
         print(min, max)
@@ -230,31 +149,49 @@ class Ticket:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
         if min and max:
             return db.query(models.Ticket) \
-                .filter(models.Ticket.deleted_at == None) \
+                .filter(models.Ticket.deleted_at == None,
+                        models.Flight.id == models.Ticket.flight_id,
+                        models.Flight.deleted_at == None,
+                        models.Flight.departure_date >= datetime.now()) \
                 .offset(min).limit(max).all()
-        return db.query(models.Ticket).filter(models.Ticket.deleted_at == None).all()
+        return db.query(models.Ticket). \
+            filter(
+            models.Ticket.deleted_at == None,
+            models.Flight.id == models.Ticket.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()).all()
 
     def get_by_id(db: Session, ticket_id: int):
         return db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
 
     def create(db: Session, ticket: schemas.TicketCreate, db_flight: models.Flight, hard: bool = False,
                soft: bool = False):
-        """ get from flight agent and him discount """
-        query = db.query(models.Agent, models.Discount, models.Booking). \
-            filter(models.Agent.id == ticket.agent_id,
-                   models.Discount.id == models.Agent.discount_id,
-                   and_(models.Booking.agent_id == ticket.agent_id,
-                        models.Booking.flight_id == db_flight.id)).first()
+        """ get from flight agent and him discount calculate price and create ticket than create agent debt history"""
+        if hard or soft:
+            query = db.query(models.Agent, models.Discount, models.Booking). \
+                join(models.Discount, models.Agent.discount_id == models.Discount.id). \
+                join(models.Booking, models.Agent.id == models.Booking.agent_id). \
+                filter(models.Agent.id == ticket.agent_id,
+                       models.Discount.id == models.Agent.discount_id,
+                       and_(models.Booking.agent_id == ticket.agent_id,
+                            models.Booking.flight_id == db_flight.id)).first()
+        else:
+            query = db.query(models.Agent, models.Discount). \
+                join(models.Discount, models.Agent.discount_id == models.Discount.id). \
+                filter(models.Agent.id == ticket.agent_id,
+                       models.Discount.id == models.Agent.discount_id).first()
 
-        agent = query["Agent"]
-        discount = query["Discount"]
-        booking = query["Booking"]
+        agent, discount, booking = models.Agent(), models.Discount(), models.Booking()
 
+        if hard or soft:
+            agent, discount, booking = query
+        else:
+            agent, discount = query["Agent"], query["Discount"]
         if agent is None:
             return {'message': 'Agent not found'}
 
-        if discount is not None:
-            price = db_flight.price - int(discount.formula)
+        if discount.amount is not None:
+            price = db_flight.price - discount.amount
         else:
             price = db_flight.price
 
@@ -286,11 +223,18 @@ class Ticket:
 
         db_ticket = models.Ticket(**ticket.dict())
         db_ticket.price = price
+        db_ticket.ticket_number = "WZ " + str(random.randint(10000000, 99999999))
         db.add(db_ticket)
         db.commit()
         db.refresh(db_ticket)
 
-        return db_ticket
+        db_agent_debt = models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_flight.id, ticket_id=db_ticket.id,
+                                         amount=db_ticket.price, type='purchase')
+        db.add(db_agent_debt)
+        db.commit()
+        db.refresh(db_agent_debt)
+
+        return {"message": "Ticket created successfully"}
 
     def update(db: Session, ticket_id: int, ticket: schemas.TicketUpdate):
         db_ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
@@ -304,7 +248,7 @@ class Ticket:
         try:
             db_ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
             if db_ticket is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
+                return {'error': 'Ticket not found'}
             if db_ticket.deleted_at is None:
                 db_ticket.deleted_at = datetime.now()
             else:
@@ -312,10 +256,8 @@ class Ticket:
             db.commit()
 
             db_flight = db.query(models.Flight).filter(models.Flight.id == db_ticket.flight_id).first()
-            print(db_flight.left_seats)
             db_flight.left_seats += 1
             db.commit()
-            print(db_flight.left_seats)
 
             return {"message": "Ticket deleted successfully"}
         except Exception as e:
@@ -334,6 +276,7 @@ class Ticket:
             ticket = db_ticket['Ticket']
             agent = db_ticket['Agent']
             flight = db_ticket['Flight']
+            print(agent.balance)
 
             ticket.deleted_at = datetime.now()
             agent.balance -= ticket_cancel.fine
@@ -341,6 +284,14 @@ class Ticket:
             flight.left_seats += 1
 
             db.commit()
+
+            db_agent_debt = models.AgentDebt(agent_id=agent.id, flight_id=flight.id, ticket_id=ticket.id,
+                                             amount=ticket_cancel.fine, type='fine')
+            db.add(db_agent_debt)
+            db.commit()
+            db.refresh(db_agent_debt)
+
+            print(agent.balance)
 
             return {"message": "Ticket deleted successfully and fine added to agent balance"}
         except Exception as e:
@@ -351,38 +302,37 @@ class Ticket:
 class Booking:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
         if min and max:
-            return db.query(models.Booking).offset(min).limit(max).all()
-        return db.query(models.Booking).all()
+            return db.query(models.Booking) \
+                .filter(
+                models.Booking.deleted_at == None,
+                models.Flight.id == models.Booking.flight_id,
+                models.Flight.deleted_at == None,
+                models.Flight.departure_date >= datetime.now()
+            ).offset(min).limit(max).all()
+        return db.query(models.Booking) \
+            .filter(
+            models.Booking.deleted_at == None,
+            models.Flight.id == models.Booking.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()
+        ).all()
 
     def get_by_id(db: Session, booking_id: int):
-        return db.query(models.Booking).filter(models.Booking.id == booking_id).first()
-
-    def create(db: Session, booking: schemas.BookingCreate, db_flight: models.Flight):
-        """ if booking created successfully, -1 from models Flight left_seats """
-        quety = db.query(
-            models.Agent, models.Discount). \
+        return db.query(models.Booking). \
             filter(
-            models.Agent.id == booking.agent_id,
-            models.Discount.id == models.Agent.discount_id).first()
+            models.Booking.id == booking_id,
+            models.Booking.deleted_at == None,
+            models.Flight.id == models.Booking.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()
+        ).first()
 
-        flight = db_flight
-        agent = quety['Agent']
-        discount = quety['Discount']
+    def create(db: Session, booking: schemas.BookingCreate, flight: models.Flight):
+        """ if booking created successfully, -1 from models Flight left_seats """
+        if flight.left_seats - booking.hard_block - booking.soft_block < 0:
+            return {'message': 'Flight has not enough seats'}
 
-        if agent is None:
-            return {'message': 'Agent not found'}
-
-        total = booking.soft_block + booking.hard_block
-
-        if booking.hard_block:
-            total_price = (flight.price - int(discount.formula)) * booking.hard_block
-            if not agent.is_on_credit and agent.balance - total_price < 0:
-                return {'message': 'Agent has not enough on balance'}
-            else:
-                agent.balance -= total_price
-
-        flight.left_seats -= total
-
+        flight.left_seats -= booking.hard_block + booking.soft_block
         db_booking = models.Booking(**booking.dict())
         db_booking.price = flight.price
         db.add(db_booking)
@@ -391,29 +341,22 @@ class Booking:
 
         return db_booking
 
-    def update(db: Session, booking_id: int, booking: schemas.BookingUpdate):
-        db_booking = db.query(models.Booking, models.Flight). \
-            filter(models.Booking.id == booking_id,
-                   models.Flight.id == models.Booking.flight_id).first()
+    def update(db: Session, patch: schemas.BookingUpdate, booking: models.Booking, flight: models.Flight):
+        """ find difference between old and new booking and update models Flight left_seats """
+        print('before', flight.left_seats)
 
-        booking_db = db_booking['Booking']
-        flight_db = db_booking['Flight']
+        diff = booking.hard_block + booking.soft_block - patch.hard_block - patch.soft_block
+        print('diff', diff)
+        flight.left_seats += diff
+        if flight.left_seats < 0:
+            return {'message': 'Flight has not enough seats'}
 
-        diff = (booking_db.hard_block + booking_db.soft_block) - (booking.hard_block + booking.soft_block)
-
-        if flight_db.left_seats + diff < 0:
-            return {'message': 'Not enough seats'}
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not enough seats")
-
-        for key, value in booking.dict().items():
+        for key, value in patch.dict().items():
             if value is not None:
-                setattr(booking_db, key, value)
-
-        flight_db.left_seats += diff
-
+                setattr(booking, key, value)
         db.commit()
-
-        return {'message': 'Booking updated successfully'}
+        print('after', flight.left_seats)
+        return booking
 
     def delete(db: Session, booking_id: int):
         try:
@@ -437,6 +380,85 @@ class Booking:
             db.commit()
 
             return {"message": "Booking deleted successfully"}
+        except Exception as e:
+            print(logging.error(traceback.format_exc()))
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+
+class Flight:
+    def get_list(db: Session, min: Optional[int], max: Optional[int]):
+        try:
+            if min and max:
+                return db.query(models.Flight). \
+                    filter(models.Flight.deleted_at == None,
+                           models.Flight.departure_date >= datetime.now()). \
+                    order_by(models.Flight.departure_date). \
+                    offset(min).limit(max).all()
+            return db.query(models.Flight). \
+                filter(models.Flight.deleted_at == None,
+                       models.Flight.departure_date >= datetime.now()). \
+                order_by(models.Flight.departure_date).all()
+        except Exception as e:
+            print(e)
+
+    def get_by_id(db: Session, flight_id: int):
+        return db.query(models.Flight). \
+            filter(
+            models.Flight.id == flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()).first()
+
+    def create(db: Session, flight: schemas.FlightCreate):
+        db_flight = models.Flight(**flight.dict())
+        db_flight.left_seats = flight.total_seats
+        db.add(db_flight)
+        db.commit()
+        db.refresh(db_flight)
+        return db_flight
+
+    def update(db: Session, flight_id: int, flight: schemas.FlightUpdate):
+        db_flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
+        for key, value in flight.dict().items():
+            if value is not None:
+                setattr(db_flight, key, value)
+        db.commit()
+        return db_flight
+
+    def delete(db: Session, flight: models.Flight):
+        """ get all bookings and tickets of this flight and delete them """
+        try:
+            db_ticket = db.query(models.Ticket).filter(models.Ticket.flight_id == flight.id).all()
+            db_booking = db.query(models.Booking).filter(models.Booking.flight_id == flight.id).all()
+
+            for ticket in db_ticket:
+                ticket_schema = schemas.TicketCancel(
+                    ticket_id=ticket.id,
+                    fine=0,
+                    currency='RUB',
+                )
+                Ticket.cancel(db, ticket_schema)
+            for booking in db_booking:
+                Booking.delete(db, booking.id)
+
+            flight.deleted_at = datetime.now()
+            db.commit()
+            return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}
+        except Exception as e:
+            print(logging.error(traceback.format_exc()))
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+    def get_flight_tickets(db: Session, flight_id: int):
+        return db.query(models.Ticket).filter(models.Ticket.flight_id == flight_id).all()
+
+    def set_on_sale_now(db: Session, flight_id: int, on_sale: bool = False):
+        try:
+            db_flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
+            if db_flight is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight not found")
+            if on_sale:
+                db_flight.on_sale = datetime.now()
+            db.commit()
+            return db_flight
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
@@ -581,3 +603,11 @@ class Refill:
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+
+# Agent Debt
+class AgentDebt:
+    # get list of agent debts with agent id
+    def get_list(db: Session, agent_id: int, min: Optional[int], max: Optional[int]):
+        if min and max:
+            return db.query(models.AgentDebt).filter(models.AgentDebt.agent_id == agent_id).offset(min).limit(max).all()
+        return db.query(models.AgentDebt).filter(models.AgentDebt.agent_id == agent_id).all()

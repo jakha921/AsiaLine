@@ -55,55 +55,59 @@ class Discount(Base):
     __tablename__ = "discounts"
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
-    formula = Column(String, nullable=False)
-    description = Column(String(255), nullable=True)
+    amount = Column(Integer, nullable=False, default=0)
+    name = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"Discount(id={self.id}, formula={self.formula})"
+        return f"Discount(id={self.id}, amount={self.amount}, name={self.name})"
 
 
 class Agent(Base):
     __tablename__ = "agents"
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
-    name = Column(String(255), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    company_name = Column(String(255), nullable=False)
     balance = Column(Integer, default=0)
     address = Column(String(255), nullable=True)
     phone = Column(String(20), nullable=True)
     block_date = Column(DateTime, nullable=True)
     registered_date = Column(DateTime, default=datetime.utcnow)
+    is_on_credit = Column(Boolean, default=False)
     deleted_at = Column(DateTime, nullable=True)
     discount_id = Column(Integer, ForeignKey("discounts.id"), nullable=True)
-    
+
+    user = relationship("User", backref="agents")
     discount = relationship("Discount", backref="agents")
 
     def __repr__(self):
-        return f"Agent(id={self.id}, name={self.name}, address={self.address}, phone={self.phone}, mail={self.mail})"
+        return f"Agent(id={self.id}, balance={self.balance})"
 
 
-class AgentUser(Base):
-    __tablename__ = "agent_users"
-    
+class Section(Base):
+    __tablename__ = "sections"
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False)
-
-    user = relationship("User", backref="agents")
-    agent = relationship("Agent", backref="users")
+    name_ru = Column(String(255), nullable=False)
+    name_en = Column(String(255), nullable=True)
+    name_uz = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"UserAgent(id={self.id}, user_id={self.user_id}, agent_id={self.agent_id})"
+        return f"Section(id={self.id}, name={self.name})"
 
 
 class Permission(Base):
     __tablename__ = "permissions"
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
-    name = Column(String(255), nullable=False)
+    section_id = Column(Integer, ForeignKey("sections.id"), nullable=True)
+    alias = Column(String(255), nullable=False)
     title_ru = Column(String(255), nullable=False)
     title_en = Column(String(255), nullable=True)
     title_uz = Column(String(255), nullable=True)
     description = Column(String(560), nullable=True)
+
+    section = relationship("Section", backref="permissions")
 
     def __repr__(self):
         return f"Permission(id={self.id}, name={self.name})"
@@ -198,7 +202,7 @@ class Flight(Base):
     actor = relationship("User", backref="flights")
 
     def __repr__(self):
-        return f"Flight(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, to_airport_id={self.to_airport_id}, departure_date={self.departure_date}, arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, actor_id={self.actor_id}, created_at={self.created_at}, updated_at={self.updated_at}, deleted_at={self.deleted_at})"
+        return f"Flight(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, to_airport_id={self.to_airport_id}, departure_date={self.departure_date}, arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, actor_id={self.actor_id})"
 
 
 class FlightPriceHistory(Base):
@@ -317,10 +321,12 @@ class TicketStatus(Base):
     def __repr__(self):
         return f"TicketStatus(id={self.id}, name={self.name_ru})"
 
+
 class Ticket(Base):
     __tablename__ = "tickets"
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
+    ticket_number = Column(String(255), nullable=False)
     flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
     passenger_id = Column(Integer, ForeignKey("passengers.id"), nullable=True)
