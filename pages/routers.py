@@ -6,7 +6,7 @@ import traceback
 import logging
 
 from db.database import get_db
-from logics import api, sort
+from pages import api, sort
 
 routers = APIRouter()
 

@@ -55,11 +55,11 @@ class Discount(Base):
     __tablename__ = "discounts"
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
-    formula = Column(String, nullable=False)
-    description = Column(String(255), nullable=True)
+    amount = Column(Integer, nullable=False, default=0)
+    name = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"Discount(id={self.id}, formula={self.formula})"
+        return f"Discount(id={self.id}, amount={self.amount}, name={self.name})"
 
 
 class Agent(Base):
@@ -202,7 +202,7 @@ class Flight(Base):
     actor = relationship("User", backref="flights")
 
     def __repr__(self):
-        return Flight
+        return f"Flight(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, to_airport_id={self.to_airport_id}, departure_date={self.departure_date}, arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, actor_id={self.actor_id})"
 
 
 class FlightPriceHistory(Base):
@@ -326,6 +326,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
     
     id = Column(Integer, primary_key=True, index=True, unique=True)
+    ticket_number = Column(String(255), nullable=False)
     flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
     passenger_id = Column(Integer, ForeignKey("passengers.id"), nullable=True)
@@ -429,6 +430,7 @@ class Refill(Base):
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False)
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     amount = Column(Integer, default=0)
+    comment = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
@@ -438,3 +440,25 @@ class Refill(Base):
 
     def __repr__(self):
         return f"Refill(id={self.id}, agent={self.agent})"
+
+
+class AgentDebt(Base):
+    __tablename__ = 'agent_debts'
+
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False)
+    flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
+    ticket_id = Column(Integer, ForeignKey("tickets.id"), nullable=False)
+    type = Column(Enum('fine', 'purchase', name='DebtType'), default='fine')
+    amount = Column(Integer, default=0)
+    comment = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True)
+
+    agent = relationship("Agent", backref="debts")
+    flight = relationship("Flight", backref="debts")
+    ticket = relationship("Ticket", backref="debts")
+
+    def __repr__(self):
+        return f"AgentDebt(id={self.id}, agent={self.agent})"

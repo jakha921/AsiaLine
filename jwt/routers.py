@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter
 from jwt.auth import AuthHandler
 from jwt.schemas import AuthToken
 

@@ -225,12 +225,12 @@ class FlightCreate(BaseModel):
                 "flight_number": "WZ 1234",
                 "from_airport_id": 1,
                 "to_airport_id": 2,
-                "departure_date": (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
-                "arrival_date": (datetime.now() + timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"),
+                "departure_date": (datetime.now() + timedelta(hours=12)).strftime("%Y-%m-%d %H:%M"),
+                "arrival_date": (datetime.now() + timedelta(hours=18)).strftime("%Y-%m-%d %H:%M"),
                 "price": 10000,
                 "currency": "RUB",
                 "total_seats": 100,
-                "on_sale": (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M"),
+                "on_sale": (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
                 "actor_id": 1
             }
         }
@@ -277,7 +277,7 @@ class Flight(FlightUpdate):
             }
         }
 
-    # endregion
+# endregion
 
     class CurrencyRate(BaseModel):
         rub_to_usd: float
@@ -663,23 +663,15 @@ class BookingCreate(BaseModel):
 
 
 class BookingUpdate(BookingCreate):
-    flight_id: Optional[int]
-    agent_id: Optional[int]
-    hard_block: int
-    soft_block: int
-    deleted_at: Optional[datetime]
-
-    class Config:
-        schema_extra = {
-                    "example": {
-                        **BookingCreate.Config.schema_extra.get("example"),
-                        "deleted_at": "2021-07-01T10:00:00",
-                    }
-                }
+    pass
 
 
 class Booking(BookingUpdate):
     id: int
+    flight_id: Optional[int]
+    agent_id: Optional[int]
+    hard_block: Optional[int]
+    soft_block: Optional[int]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]
@@ -808,6 +800,7 @@ class RefillCreate(BaseModel):
     receiver_id: int
     agent_id: int
     amount: int
+    comment: Optional[str]
 
     # region Validation
     @validator('receiver_id')
@@ -836,6 +829,7 @@ class RefillCreate(BaseModel):
                 "receiver_id": 1,
                 "agent_id": 1,
                 "amount": 100000,
+                "comment": "Refill comment Optional[str]",
             }
         }
 
@@ -858,6 +852,70 @@ class Refill(RefillUpdate):
             "example": {
                 "id": 1,
                 **RefillCreate.Config.schema_extra.get("example"),
+                "created_at": "2021-07-01T10:00:00",
+                "updated_at": "2021-07-01T10:00:00",
+                "deleted_at": "2021-07-01T10:00:00",
+            }
+        }
+
+# endregion
+
+
+# region Agent Debt
+class AgentDebt(BaseModel):
+    agent_id: int
+    flight_id: int
+    ticket_id: int
+    type: str
+    amount: int
+    comment: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: Optional[datetime]
+
+    # region Validation
+    @validator('agent_id')
+    def agent_id_must_be_gt_than_0(cls, v):
+        if v < 1:
+            raise ValueError('agent_id must be greater than 0')
+        return v
+
+    @validator('flight_id')
+    def flight_id_must_be_gt_than_0(cls, v):
+        if v < 1:
+            raise ValueError('flight_id must be greater than 0')
+        return v
+
+    @validator('ticket_id')
+    def ticket_id_must_be_gt_than_0(cls, v):
+        if v < 1:
+            raise ValueError('ticket_id must be greater than 0')
+        return v
+
+    @validator('type')
+    def type_must_be_in_list(cls, v):
+        """ type must be in list AgentDebt [refund, debt] """
+        if v not in [AgentDebt.type for i in AgentDebt]:
+            raise ValueError('type must be in list [refund, debt]')
+        return v
+
+    @validator('amount')
+    def amount_not_negative(cls, v):
+        if v < 0:
+            raise ValueError('amount must be greater than 0')
+        return v
+
+    # endregion
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "agent_id": 1,
+                "flight_id": 1,
+                "ticket_id": 1,
+                "type": "refund",
+                "amount": 100000,
+                "comment": "Комментарий",
                 "created_at": "2021-07-01T10:00:00",
                 "updated_at": "2021-07-01T10:00:00",
                 "deleted_at": "2021-07-01T10:00:00",

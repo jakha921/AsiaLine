@@ -331,21 +331,21 @@ class Agent(AgentUpdate):
 
 # region Discount
 class DiscountCreate(BaseModel):
-    formula:str
-    description: Optional[str]
+    amount:str
+    name: Optional[str]
 
     class Config:
         schema_extra = {
             "example": {
-                "formula": "10",
-                "description": "10% discount",
+                "amount": "10",
+                "name": "10% discount",
             }
         }
 
 
 class DiscountUpdate(DiscountCreate):
-    formula: Optional[str]
-    description: Optional[str]
+    amount: Optional[str]
+    name: Optional[str]
 
 
 class Discount(DiscountCreate):

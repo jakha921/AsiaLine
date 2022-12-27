@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import traceback
 import logging
 
-from app.currency_rate import get_currency_rate
+from users.currency_rate import get_currency_rate
 from db import models
 
 routers = APIRouter()
