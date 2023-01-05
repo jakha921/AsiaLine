@@ -1,1 +1,0 @@
-db_uri = "postgresql://username:password@localhost/db_name"
