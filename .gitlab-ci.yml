@@ -19,7 +19,7 @@ build-docker:
       if [[ $CI_COMMIT_REF_NAME == 'staging' ]]; then
         TAG=staging-$CI_COMMIT_SHORT_SHA
       elif [[ $CI_COMMIT_REF_NAME == 'main' ]]; then
-        TAG=master-$CI_COMMIT_SHORT_SHA
+        TAG=main-$CI_COMMIT_SHORT_SHA
       fi
     - echo -e "  Image name is $CI_REGISTRY_IMAGE:$TAG"
 
