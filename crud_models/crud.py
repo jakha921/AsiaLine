@@ -611,3 +611,40 @@ class AgentDebt:
         if min and max:
             return db.query(models.AgentDebt).filter(models.AgentDebt.agent_id == agent_id).offset(min).limit(max).all()
         return db.query(models.AgentDebt).filter(models.AgentDebt.agent_id == agent_id).all()
+
+
+class TicketClass:
+    def get_list(db: Session, min: Optional[int], max: Optional[int]):
+        if min and max:
+            return db.query(models.TicketClass).offset(min).limit(max).all()
+        return db.query(models.TicketClass).all()
+
+    def get_by_id(db: Session, ticket_class_id: int):
+        return db.query(models.TicketClass).filter(models.TicketClass.id == ticket_class_id).first()
+
+    def create(db: Session, ticket_class: schemas.TicketClassCreate):
+        db_ticket_class = models.TicketClass(**ticket_class.dict())
+        db.add(db_ticket_class)
+        db.commit()
+        db.refresh(db_ticket_class)
+        return db_ticket_class
+
+    def update(db: Session, ticket_class_id: int, ticket_class: schemas.TicketClassUpdate):
+        db_ticket_class = db.query(models.TicketClass).filter(models.TicketClass.id == ticket_class_id).first()
+        for key, value in ticket_class.dict().items():
+            if value is not None:
+                setattr(db_ticket_class, key, value)
+        db.commit()
+        return db_ticket_class
+
+    def delete(db: Session, ticket_class_id: int):
+        try:
+            db_ticket_class = db.query(models.TicketClass).filter(models.TicketClass.id == ticket_class_id).first()
+            if db_ticket_class is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket class not found")
+            db.delete(db_ticket_class)
+            db.commit()
+            return {"message": "Ticket class deleted successfully"}
+        except Exception as e:
+            print(logging.error(traceback.format_exc()))
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")

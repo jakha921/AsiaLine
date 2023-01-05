@@ -52,7 +52,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     username: Optional[str]
-    role_id: Optional[int]
+    role_id: int
     language: Optional[str] = Field(default="ru", max_length=2)
 
     # region Validators
@@ -66,6 +66,12 @@ class UserCreate(BaseModel):
     def password_must_contain_at_least_8_characters(cls, v):
         if len(v) < 8:
             raise ValueError('password must contain at least 8 characters')
+        return v
+
+    @validator('role_id')
+    def role_id_must_be_positive(cls, v):
+        if v < 1:
+            raise ValueError('role_id must be positive')
         return v
 
     # endregion
@@ -121,7 +127,6 @@ class User(UserCreate):
     phone: Optional[str]
     date_joined: Optional[datetime]
     last_login: Optional[datetime]
-    deleted_at: Optional[datetime]
 
     class Config:
         orm_mode = True
@@ -132,7 +137,6 @@ class User(UserCreate):
                 "phone": "+998901234567",
                 "date_joined": "2021-01-01 00:00:00",
                 "last_login": "2021-01-01 00:00:00",
-                "deleted": None,
             }
         }
 
@@ -173,6 +177,7 @@ class SectionUpdate(SectionCreate):
 
 class Section(SectionCreate):
     id: int
+    permissions: list
 
     class Config:
         orm_mode = True
@@ -180,6 +185,7 @@ class Section(SectionCreate):
             "example": {
                 "id": 1,
                 **SectionCreate.Config.schema_extra.get("example"),
+                "permissions": []
             }
         }
 
@@ -210,8 +216,7 @@ class PermissionCreate(BaseModel):
 
 
 class PermissionUpdate(PermissionCreate):
-    alias: Optional[str]
-    title_ru: Optional[str]
+    pass
 
 
 class Permission(PermissionCreate):
@@ -234,6 +239,18 @@ class Permission(PermissionCreate):
 class RolePermissionCreate(BaseModel):
     role_id: int
     permission_id: int
+
+    @validator('role_id')
+    def role_id_must_be_positive(cls, v):
+        if v < 1:
+            raise ValueError('role_id must be positive')
+        return v
+
+    @validator('permission_id')
+    def permission_id_must_be_positive(cls, v):
+        if v < 1:
+            raise ValueError('permission_id must be positive')
+        return v
 
     class Config:
         schema_extra = {
@@ -291,7 +308,6 @@ class AgentCreate(BaseModel):
 class AgentUpdate(AgentCreate):
     user_id: Optional[int]
     company_name: Optional[str]
-    block_date: Optional[datetime]
 
     class Config:
         schema_extra = {
@@ -303,7 +319,6 @@ class AgentUpdate(AgentCreate):
                 "phone": "+998901234567",
                 "is_on_credit": False,
                 "discount_id": 1,
-                "block_date": "2021-01-01 00:00:00",
             }
         }
 
@@ -326,13 +341,14 @@ class Agent(AgentUpdate):
             }
         }
 
+
 # endregion
 
 
 # region Discount
 class DiscountCreate(BaseModel):
-    amount:str
-    name: Optional[str]
+    amount: str
+    name: str
 
     class Config:
         schema_extra = {
@@ -360,6 +376,4 @@ class Discount(DiscountCreate):
             }
         }
 
-
 # endregion
-

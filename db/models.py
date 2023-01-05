@@ -93,7 +93,7 @@ class Section(Base):
     name_uz = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"Section(id={self.id}, name={self.name})"
+        return f"Section(id={self.id}, name={self.name_ru})"
 
 
 class Permission(Base):
@@ -110,7 +110,7 @@ class Permission(Base):
     section = relationship("Section", backref="permissions")
 
     def __repr__(self):
-        return f"Permission(id={self.id}, name={self.name})"
+        return f"Permission(id={self.id}, name={self.title_ru})"
 
 
 class RolePermission(Base):

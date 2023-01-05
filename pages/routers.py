@@ -37,8 +37,7 @@ async def get_dates_and_count_flights(db: Session = Depends(get_db),
 @routers.get("/main/flights/range")
 async def get_static_flight_range(db: Session = Depends(get_db),
                                   from_date: Optional[date] = datetime.now().date(),
-                                  date_to: Optional[date] = datetime.now().date(),
-                                  lang: Optional[str] = "ru"):
+                                  date_to: Optional[date] = datetime.now().date()):
     """ get flights by range departure date and last currency rate """
     db_currency_rate = api.get_currency_last_item(db)
     db_flights = api.get_flights_by_range_departure_date(db, from_date, date_to)
@@ -47,7 +46,7 @@ async def get_static_flight_range(db: Session = Depends(get_db),
     db_sold_tickets = api.get_sold_tickets_for_last_30_days(db)
 
     sorted_cur = sort.sort_currency_rate(db_currency_rate)
-    sorted_flights = sort.sort_flights(db, db_flights, lang)
+    sorted_flights = sort.sort_flights(db, db_flights)
 
     result = {
         "currency": sorted_cur,
@@ -65,11 +64,10 @@ async def get_static_flight_range(db: Session = Depends(get_db),
 @routers.get("/flights/main")
 async def get_flights(db: Session = Depends(get_db),
                       from_date: Optional[date] = datetime.now().date(),
-                      to_date: Optional[date] = datetime.now().date(),
-                      lang: Optional[str] = "ru"):
+                      to_date: Optional[date] = datetime.now().date()):
     """ Get all flights where departure date >= now and on sale <= now """
     db_flights = api.get_flights_by_range_departure_date(db, from_date, to_date)
-    sorted_flights = sort.sort_flights(db, db_flights, lang)
+    sorted_flights = sort.sort_flights(db, db_flights)
     currency_rate = api.get_currency_last_item(db)
 
     result = {
@@ -82,7 +80,7 @@ async def get_flights(db: Session = Depends(get_db),
 
 @routers.get("/flights/tickets")
 async def get_tickets_by_flight_id(db: Session = Depends(get_db),
-                      flight_id: int = ...):
+                                   flight_id: int = ...):
     """ Get all tickets for given flight id """
     db_tickets = api.get_tickets_by_flight_id(db, flight_id)
     db_currency_rate = api.get_currency_last_item(db)
@@ -100,11 +98,10 @@ async def get_tickets_by_flight_id(db: Session = Depends(get_db),
 @routers.get("/flights/queue")
 async def get_queue_fligths(db: Session = Depends(get_db),
                             from_date: Optional[date] = datetime.now().date(),
-                            to_date: Optional[date] = datetime.now().date(),
-                            lang: Optional[str] = "ru"):
+                            to_date: Optional[date] = datetime.now().date()):
     """ Get all flights where on sale date >= now """
     db_flights = api.get_flights_by_on_sale_date(db, from_date, to_date)
-    sorted_flights = sort.sort_flights(db, db_flights, lang)
+    sorted_flights = sort.sort_flights(db, db_flights)
 
     currency_rate = api.get_currency_last_item(db)
 
@@ -116,26 +113,25 @@ async def get_queue_fligths(db: Session = Depends(get_db),
     return result
 
 
-# ! check it later do not work
 @routers.get("/flights/quotas")
 async def get_flight_quotas(db: Session = Depends(get_db),
                             from_date: Optional[date] = datetime.now().date(),
                             to_date: Optional[date] = datetime.now().date()):
     """ get all flight quotes """
     db_flights = api.get_quotas_by_flight_id(db, from_date, to_date)
+    sorted_quotas = sort.sort_flight_quotas(db_flights)
 
-    return db_flights
+    return sorted_quotas
 
 
 @routers.get("/tickets/main")
 async def get_tickets(db: Session = Depends(get_db),
                       from_date: Optional[date] = datetime.now().date(),
-                      to_date: Optional[date] = datetime.now().date(),
-                      lang: Optional[str] = "ru"):
+                      to_date: Optional[date] = datetime.now().date()):
     """ Get tickets by flights where departure date is not past now """
     try:
         db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date, to_date)
-        sorted_tickets = sort.sort_tickets(db_tickets, lang)
+        sorted_tickets = sort.sort_tickets(db_tickets)
         currency_rate = api.get_currency_last_item(db)
 
         result = {
@@ -182,13 +178,12 @@ async def get_roles(db: Session = Depends(get_db)):
 # payment
 @routers.get("/payments/main")
 async def get_tickets(db: Session = Depends(get_db),
-                      agent_id: Optional[int] = None,
                       from_date: Optional[date] = datetime.now().date() - timedelta(days=7),
                       to_date: Optional[date] = datetime.now().date(),
                       ):
     """ get all payments who paid amount of agents for fill the balance """
     try:
-        db_payments = api.get_tickets_by_agent_id(db, from_date, to_date, agent_id)
+        db_payments = api.get_tickets_by_agent_id(db, from_date, to_date)
         sorted_payments = sort.sorted_payments(db_payments)
         return {
             'payments_count': len(sorted_payments),
