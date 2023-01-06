@@ -41,7 +41,8 @@ deploy-to-stage:
     - |
       sh -c "helm upgrade --install avialine .helm -n staging \
       --set image.tag=staging-$CI_COMMIT_SHORT_SHA \
-      --set ingress.host=apitest.asialine.ru"
+      --set ingress.host=apitest.asialine.ru \
+      --debug"
 deploy-to-production:
   image: n0mads/kubectl-helm-doctl
   stage: deploy-to-k8s
@@ -58,4 +59,5 @@ deploy-to-production:
       --set image.tag=main-$CI_COMMIT_SHORT_SHA \
       --set affinity=production-nodes \
       --set tolerations=production-nodes \
-      --set ingress.host=api.asialine.ru"
+      --set ingress.host=api.asialine.ru \
+      --debug"
