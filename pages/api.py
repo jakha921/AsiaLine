@@ -35,12 +35,12 @@ def update_currency_rate(db: Session):
 
 
 def get_currency_last_item(db: Session):
-    """ Get last currency rate if updated_at <= 8 hours, update currency rate """
+    """ Get last currency rate if updated_at <= 24 hours, update currency rate """
     db_currency_rate = db.query(models.CurrencyRate).order_by(models.CurrencyRate.updated_at.desc()).first()
     if not db_currency_rate:
         update_currency_rate(db)
         get_currency_last_item(db)
-    if db_currency_rate.updated_at <= datetime.now() - timedelta(hours=8):
+    if db_currency_rate.updated_at <= datetime.now() - timedelta(hours=24):
         db_currency_rate = update_currency_rate(db)
 
     return db_currency_rate

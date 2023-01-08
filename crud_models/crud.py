@@ -14,7 +14,6 @@ import logging
 
 class Country:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
-        print(min, max)
         if min and max:
             return db.query(models.Country).offset(min).limit(max).all()
         return db.query(models.Country).all()
@@ -29,18 +28,16 @@ class Country:
         db.refresh(db_country)
         return db_country
 
-    def update(db: Session, country_id: int, country: schemas.CountryUpdate):
-        db_country = db.query(models.Country).filter(models.Country.id == country_id).first()
+    def update(db: Session, db_country: models.Country, country: schemas.CountryUpdate):
         for key, value in country.dict().items():
             if value is not None:
                 setattr(db_country, key, value)
         db.commit()
         return db_country
 
-    def delete(db: Session, country_id: int):
-        db_country = db.query(models.Country).filter(models.Country.id == country_id).first()
-        if db_country is None:
-            return {'message': 'Country not found'}
+    def delete(db: Session, db_country: models.Country):
+        for db_city in db_country.cities:
+            City.delete(db, db_city)
         db.delete(db_country)
         db.commit()
         return db_country
@@ -62,23 +59,20 @@ class City:
         db.refresh(db_city)
         return db_city
 
-    def update(db: Session, city_id: int, city: schemas.CityUpdate):
-        db_city = db.query(models.City).filter(models.City.id == city_id).first()
+    def update(db: Session, db_city: models.City, city: schemas.CityUpdate):
         for key, value in city.dict().items():
             if value is not None:
                 setattr(db_city, key, value)
         db.commit()
         return db_city
 
-    def delete(db: Session, city_id: int):
+    def delete(db: Session, db_city: models.City):
         try:
-            db_city = db.query(models.City).filter(models.City.id == city_id).first()
-            if db_city is None:
-                return {'message': 'City not found'}
-            else:
-                db.delete(db_city)
-                db.commit()
-                return db_city
+            for db_airport in db_city.airports:
+                db.delete(db_airport)
+            db.delete(db_city)
+            db.commit()
+            return db_city
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
@@ -100,23 +94,18 @@ class Airport:
         db.refresh(db_airport)
         return db_airport
 
-    def update(db: Session, airport_id: int, airport: schemas.AirportUpdate):
-        db_airport = db.query(models.Airport).filter(models.Airport.id == airport_id).first()
+    def update(db: Session, db_airport: models.Airport, airport: schemas.AirportUpdate):
         for key, value in airport.dict().items():
             if value is not None:
                 setattr(db_airport, key, value)
         db.commit()
         return db_airport
 
-    def delete(db: Session, airport_id: int):
+    def delete(db: Session, db_airport: models.Airport):
         try:
-            db_airport = db.query(models.Airport).filter(models.Airport.id == airport_id).first()
-            if db_airport is None:
-                return {'message': 'Airport not found'}
-            else:
-                db.delete(db_airport)
-                db.commit()
-                return db_airport
+            db.delete(db_airport)
+            db.commit()
+            return db_airport
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
@@ -236,30 +225,26 @@ class Ticket:
 
         return {"message": "Ticket created successfully"}
 
-    def update(db: Session, ticket_id: int, ticket: schemas.TicketUpdate):
-        db_ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+    def update(db: Session, db_ticket: models.Ticket, ticket: schemas.TicketUpdate):
         for key, value in ticket.dict().items():
             if value is not None:
                 setattr(db_ticket, key, value)
         db.commit()
         return db_ticket
 
-    def delete(db: Session, ticket_id: int):
+    def delete(db: Session, db_ticket: models.Ticket):
         try:
-            db_ticket = db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
-            if db_ticket is None:
-                return {'error': 'Ticket not found'}
-            if db_ticket.deleted_at is None:
-                db_ticket.deleted_at = datetime.now()
-            else:
-                return {"message": "Ticket already deleted"}
+            if db_ticket.deleted_at is not None:
+                return {'message': 'Ticket already deleted'}
+
+            db_ticket.deleted_at = datetime.now()
             db.commit()
 
             db_flight = db.query(models.Flight).filter(models.Flight.id == db_ticket.flight_id).first()
             db_flight.left_seats += 1
             db.commit()
 
-            return {"message": "Ticket deleted successfully"}
+            return {"message": "Ticket deleted successfully and flight seats increased"}
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
@@ -416,8 +401,7 @@ class Flight:
         db.refresh(db_flight)
         return db_flight
 
-    def update(db: Session, flight_id: int, flight: schemas.FlightUpdate):
-        db_flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
+    def update(db: Session, db_flight: models.Flight, flight: schemas.FlightUpdate):
         for key, value in flight.dict().items():
             if value is not None:
                 setattr(db_flight, key, value)
@@ -439,26 +423,29 @@ class Flight:
                 Ticket.cancel(db, ticket_schema)
             for booking in db_booking:
                 Booking.delete(db, booking.id)
-
+            print(flight)
             flight.deleted_at = datetime.now()
-            db.commit()
-            return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}
+            # db.commit()
+            return flight
+            # return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
     def get_flight_tickets(db: Session, flight_id: int):
-        return db.query(models.Ticket).filter(models.Ticket.flight_id == flight_id).all()
+        return db.query(models.Ticket).filter(
+            models.Ticket.flight_id == flight_id,
+            models.Ticket.deleted_at == None,
+            models.Flight.id == models.Ticket.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()
+        ).all()
 
-    def set_on_sale_now(db: Session, flight_id: int, on_sale: bool = False):
+    def set_on_sale_now(db: Session, db_flight: models.Flight):
         try:
-            db_flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
-            if db_flight is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight not found")
-            if on_sale:
-                db_flight.on_sale = datetime.now()
+            db_flight.on_sale = datetime.now()
             db.commit()
-            return db_flight
+            return {"message": "Flight on sale now"}
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
@@ -467,11 +454,25 @@ class Flight:
 class ScrapedPrice:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
         if min and max:
-            return db.query(models.ScrapedPrice).offset(min).limit(max).all()
-        return db.query(models.ScrapedPrice).all()
+            return db.query(models.ScrapedPrice)\
+                .filter(
+                models.Flight.id == models.ScrapedPrice.flight_id,
+                models.Flight.deleted_at == None,
+                models.Flight.departure_date >= datetime.now()
+            ).offset(min).limit(max).all()
+        return db.query(models.ScrapedPrice) \
+            .filter(
+            models.Flight.id == models.ScrapedPrice.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()).all()
 
     def get_by_id(db: Session, scraped_price_id: int):
-        return db.query(models.ScrapedPrice).filter(models.ScrapedPrice.id == scraped_price_id).first()
+        return db.query(models.ScrapedPrice).filter(
+            models.ScrapedPrice.id == scraped_price_id,
+            models.Flight.id == models.ScrapedPrice.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()
+        ).first()
 
     def create(db: Session, scraped_price: schemas.ScrapedPriceCreate):
         db_scraped_price = models.ScrapedPrice(**scraped_price.dict())
@@ -480,19 +481,15 @@ class ScrapedPrice:
         db.refresh(db_scraped_price)
         return db_scraped_price
 
-    def update(db: Session, scraped_price_id: int, scraped_price: schemas.ScrapedPriceUpdate):
-        db_scraped_price = db.query(models.ScrapedPrice).filter(models.ScrapedPrice.id == scraped_price_id).first()
+    def update(db: Session, db_scraped_price: models.ScrapedPrice, scraped_price: schemas.ScrapedPriceUpdate):
         for key, value in scraped_price.dict().items():
             if value is not None:
                 setattr(db_scraped_price, key, value)
         db.commit()
         return db_scraped_price
 
-    def delete(db: Session, scraped_price_id: int):
+    def delete(db: Session, db_scraped_price: models.ScrapedPrice):
         try:
-            db_scraped_price = db.query(models.ScrapedPrice).filter(models.ScrapedPrice.id == scraped_price_id).first()
-            if db_scraped_price is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scraped price not found")
             db.delete(db_scraped_price)
             db.commit()
             return {"message": "Scraped price deleted successfully"}
@@ -517,8 +514,7 @@ class Gender:
         db.refresh(db_gender)
         return db_gender
 
-    def update(db: Session, gender_id: int, gender: schemas.GenderUpdate):
-        db_gender = db.query(models.Gender).filter(models.Gender.id == gender_id).first()
+    def update(db: Session, db_gender: models.Gender, gender: schemas.GenderUpdate):
         for key, value in gender.dict().items():
             if value is not None:
                 setattr(db_gender, key, value)
