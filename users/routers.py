@@ -330,6 +330,8 @@ async def get_agent(agent_id: int, db: Session = Depends(get_db)):
 @routers.post("/agent", tags=["agents"])
 async def create_agent(agent: schemas.AgentCreate, db: Session = Depends(get_db)):
     try:
+        if crud.Agent.get_by_user_id(db, agent.user_id):
+            return {"detail": "This user is already an agent"}
         return schemas.Agent.from_orm(crud.Agent.create(db, agent))
     except Exception as e:
         print(logging.error(traceback.format_exc()))
@@ -342,6 +344,8 @@ async def update_agent(agent_id: int, agent: schemas.AgentUpdate, db: Session = 
         db_agent = crud.Agent.get_by_id(db, agent_id)
         if db_agent is None:
             return {"detail": "Agent not found"}
+        if crud.Agent.get_by_user_id(db, agent.user_id):
+            return {"detail": "This user is already an agent"}
         return schemas.Agent.from_orm(crud.Agent.update(db, agent_id, agent))
     except Exception as e:
         print(logging.error(traceback.format_exc()))

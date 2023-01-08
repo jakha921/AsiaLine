@@ -12,7 +12,7 @@ routers = APIRouter()
 
 
 # region Country
-@routers.get("/countries", response_model=list[schemas.Country])
+@routers.get("/countries", tags=["countries"], response_model=list[schemas.Country])
 async def get_countries(
         min: Optional[int] = None,
         max: Optional[int] = None,
@@ -30,32 +30,32 @@ async def get_countries(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.get("/country/{country_id}", response_model=schemas.Country)
+@routers.get("/country/{country_id}", tags=["countries"])
 async def get_country(country_id: int, db: Session = Depends(get_db)):
     """ Get country by id """
     try:
         db_country = crud.Country.get_by_id(db, country_id)
         if db_country is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
-        return db_country
+            return {"detail": "Country not found"}
+        return schemas.Country.from_orm(db_country)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.post("/country", response_model=schemas.Country)
+@routers.post("/country", tags=["countries"])
 async def create_country(country: schemas.CountryCreate, db: Session = Depends(get_db)):
     """ Create new country """
     try:
-        return crud.Country.create(db, country)
+        return schemas.Country.from_orm(crud.Country.create(db, country))
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/country/{country_id}", response_model=schemas.Country)
+@routers.patch("/country/{country_id}", tags=["countries"])
 async def update_country(country_id: int, country: schemas.CountryUpdate, db: Session = Depends(get_db)):
     """
     Update country by id\n
@@ -65,22 +65,22 @@ async def update_country(country_id: int, country: schemas.CountryUpdate, db: Se
     try:
         db_country = crud.Country.get_by_id(db, country_id)
         if db_country is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
-        return crud.Country.update(db, country_id, country)
+            return {"detail": "Country not found"}
+        return schemas.Country.from_orm(crud.Country.update(db, db_country, country))
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/country/{country_id}")
+@routers.delete("/country/{country_id}", tags=["countries"])
 async def delete_country(country_id: int, db: Session = Depends(get_db)):
     """ Delete country by id """
     try:
         db_country = crud.Country.get_by_id(db, country_id)
         if db_country is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Country not found")
-        return crud.Country.delete(db, country_id)
+            return {"detail": "Country not found"}
+        return crud.Country.delete(db, db_country)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
@@ -91,7 +91,7 @@ async def delete_country(country_id: int, db: Session = Depends(get_db)):
 
 
 # region City
-@routers.get("/cities")
+@routers.get("/cities", tags=["cities"], response_model=list[schemas.City])
 async def get_cities(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Get list of cities\n
@@ -106,21 +106,21 @@ async def get_cities(min: Optional[int] = None, max: Optional[int] = None, db: S
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.get("/city/{city_id}", response_model=schemas.City)
+@routers.get("/city/{city_id}", tags=["cities"])
 async def get_city(city_id: int, db: Session = Depends(get_db)):
     """ Get city by id """
     try:
         db_city = crud.City.get_by_id(db, city_id)
         if db_city is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="City not found")
-        return db_city
+            return {"detail": "City not found"}
+        return schemas.City.from_orm(db_city)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.post("/city", response_model=schemas.City)
+@routers.post("/city", tags=["cities"])
 async def create_city(city: schemas.CityCreate, db: Session = Depends(get_db)):
     """ Create new city """
     try:
@@ -131,7 +131,7 @@ async def create_city(city: schemas.CityCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/city/{city_id}", response_model=schemas.City)
+@routers.patch("/city/{city_id}", tags=["cities"])
 async def update_city(city_id: int, city: schemas.CityUpdate, db: Session = Depends(get_db)):
     """
     Update city by id\n
@@ -141,19 +141,22 @@ async def update_city(city_id: int, city: schemas.CityUpdate, db: Session = Depe
     try:
         db_city = crud.City.get_by_id(db, city_id)
         if db_city is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="City not found")
-        return crud.City.update(db, city_id, city)
+            return {"detail": "City not found"}
+        return schemas.City.from_orm(crud.City.update(db, db_city, city))
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/city/{city_id}")
+@routers.delete("/city/{city_id}", tags=["cities"])
 async def delete_city(city_id: int, db: Session = Depends(get_db)):
     """ Delete city by id """
     try:
-        return crud.City.delete(db, city_id)
+        db_city = crud.City.get_by_id(db, city_id)
+        if db_city is None:
+            return {"detail": "City not found"}
+        return crud.City.delete(db, db_city)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
@@ -164,7 +167,7 @@ async def delete_city(city_id: int, db: Session = Depends(get_db)):
 
 
 # region Airport
-@routers.get("/airports", response_model=list[schemas.Airport])
+@routers.get("/airports", response_model=list[schemas.Airport], tags=["airports"])
 async def get_airports(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Get list of airports\n
@@ -179,32 +182,32 @@ async def get_airports(min: Optional[int] = None, max: Optional[int] = None, db:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.get("/airport/{airport_id}", response_model=schemas.Airport)
+@routers.get("/airport/{airport_id}", tags=["airports"])
 async def get_airport(airport_id: int, db: Session = Depends(get_db)):
     """ Get airport by id """
     try:
         db_airport = crud.Airport.get_by_id(db, airport_id)
         if db_airport is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Airport not found")
-        return db_airport
+            return {"detail": "Airport not found"}
+        return schemas.Airport.from_orm(db_airport)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.post("/airport", response_model=schemas.Airport)
+@routers.post("/airport", tags=["airports"])
 async def create_airport(airport: schemas.AirportCreate, db: Session = Depends(get_db)):
     """ Create new airport """
     try:
-        return crud.Airport.create(db, airport)
+        return schemas.Airport.from_orm(crud.Airport.create(db, airport))
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/airport/{airport_id}", response_model=schemas.Airport)
+@routers.patch("/airport/{airport_id}", tags=["airports"])
 async def update_airport(airport_id: int, airport: schemas.AirportUpdate, db: Session = Depends(get_db)):
     """
     Update airport by id\n
@@ -214,19 +217,22 @@ async def update_airport(airport_id: int, airport: schemas.AirportUpdate, db: Se
     try:
         db_airport = crud.Airport.get_by_id(db, airport_id)
         if db_airport is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Airport not found")
-        return crud.Airport.update(db, airport_id, airport)
+            return {"detail": "Airport not found"}
+        return schemas.Airport.from_orm(crud.Airport.update(db, db_airport, airport))
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/airport/{airport_id}")
+@routers.delete("/airport/{airport_id}", tags=["airports"])
 async def delete_airport(airport_id: int, db: Session = Depends(get_db)):
     """ Delete airport by id """
     try:
-        return crud.Airport.delete(db, airport_id)
+        db_airport = crud.Airport.get_by_id(db, airport_id)
+        if db_airport is None:
+            return {"detail": "Airport not found"}
+        return crud.Airport.delete(db, db_airport)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
@@ -237,7 +243,7 @@ async def delete_airport(airport_id: int, db: Session = Depends(get_db)):
 
 
 # region Flight
-@routers.get("/flights")
+@routers.get("/flights", response_model=list[schemas.Flight], tags=["flights"])
 async def get_flights(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Get list of flights where departure date is greater than current date and flight is not deleted\n
@@ -252,21 +258,21 @@ async def get_flights(min: Optional[int] = None, max: Optional[int] = None, db: 
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.get("/flight/{flight_id}")
+@routers.get("/flight/{flight_id}", tags=["flights"])
 async def get_flight(flight_id: int, db: Session = Depends(get_db)):
     """ Get flight by id if departure date is greater than current date and flight is not deleted """
     try:
         db_flight = crud.Flight.get_by_id(db, flight_id)
         if db_flight is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flight not found")
-        return db_flight
+            return {"detail": "Flight not found"}
+        return schemas.Flight.from_orm(db_flight)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.post("/flight", response_model=schemas.Flight)
+@routers.post("/flight", tags=["flights"])
 async def create_flight(flight: schemas.FlightCreate, db: Session = Depends(get_db)):
     """
     Create new flight\n
@@ -281,17 +287,19 @@ async def create_flight(flight: schemas.FlightCreate, db: Session = Depends(get_
             return {"error": "From and to airports cannot be the same"}
         if flight.departure_date >= flight.arrival_date:
             return {"error": "departure date must be before arrival date"}
+        if flight.on_sale <= datetime.now():
+            return {"error": "on sale date must be before current date"}
         create = crud.Flight.create(db, flight)
-        if flight.price != 0:
+        if flight.price > 0:
             crud.FlightPriceHistory.create(db, flight.price, create.id)
-        return create
+        return schemas.Flight.from_orm(create)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/flight/{flight_id}")
+@routers.patch("/flight/{flight_id}", tags=["flights"])
 async def update_flight(flight_id: int, flight: schemas.FlightUpdate, db: Session = Depends(get_db)):
     """
     Update flight by id\n
@@ -324,10 +332,10 @@ async def update_flight(flight_id: int, flight: schemas.FlightUpdate, db: Sessio
                 return {"error": "Left seats cannot be more than total seats"}
 
         current_price, db_price = flight.price, db_flight.price
-        update = crud.Flight.update(db, flight_id, flight)
+        update = crud.Flight.update(db, db_flight, flight)
         if current_price != db_price:
             crud.FlightPriceHistory.create(db, flight.price, update.id)
-        return update
+        return schemas.Flight.from_orm(update)
 
     except Exception as e:
         print(logging.error(e))
@@ -335,7 +343,7 @@ async def update_flight(flight_id: int, flight: schemas.FlightUpdate, db: Sessio
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/flight/{flight_id}")
+@routers.delete("/flight/{flight_id}", tags=["flights"])
 async def delete_flight(flight_id: int, db: Session = Depends(get_db)):
     """
      **Attention:**\n
@@ -352,27 +360,31 @@ async def delete_flight(flight_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.get("/flight/{flight_id}/tickets")
+@routers.get("/flight/{flight_id}/tickets", tags=["flights"])
 async def get_flight_tickets(flight_id: int, db: Session = Depends(get_db)):
     """ Get all tickets of flight by id """
     try:
-        return crud.Flight.get_flight_tickets(db, flight_id)
+        tickets = crud.Flight.get_flight_tickets(db, flight_id)
+        if tickets == []:
+            return {"detail": "Flight not found or flight has no tickets"}
+        return tickets
+
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/flight-set-on-sale/{flight_id}")
+@routers.patch("/flight-set-on-sale/{flight_id}", tags=["flights"])
 async def set_flight_for_sale(flight_id: int, db: Session = Depends(get_db)):
     """ Set flight for sale from now """
     try:
         db_flight = crud.Flight.get_by_id(db, flight_id)
-        if db_flight is None and db_flight.deleted_at is None:
+        if db_flight is None or db_flight.deleted_at is not None or db_flight.departure_date < datetime.now():
             return {"error": "Flight not found"}
         if db_flight.on_sale < datetime.now():
             return {"error": "Flight is already on sale"}
-        return {"message": "Flight is now on sale", "flight": crud.Flight.set_on_sale_now(db, flight_id, True)}
+        return crud.Flight.set_on_sale_now(db, db_flight)
 
     except Exception as e:
         print(logging.error(e))
@@ -380,11 +392,7 @@ async def set_flight_for_sale(flight_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-# endregion
-
-
-# region Flight price history
-@routers.get("/flight/{flight_id}/prices", response_model=list[schemas.FlightHistory])
+@routers.get("/flight/{flight_id}/prices", response_model=list[schemas.FlightHistory], tags=["flights"])
 async def get_flight_price_history_by_fligh_id(flight_id: int, min: Optional[int] = 1, max: Optional[int] = 10,
                                                db: Session = Depends(get_db)):
     """ Get flight id and return list of flight price history for this flight """
@@ -400,7 +408,7 @@ async def get_flight_price_history_by_fligh_id(flight_id: int, min: Optional[int
 
 
 # region Ticket
-@routers.get("/tickets")
+@routers.get("/tickets", response_model=list[schemas.Ticket], tags=["tickets"])
 async def get_tickets(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Get all tickets where ticket and flight are not deleted and flight departure date is greater than current date
@@ -414,16 +422,16 @@ async def get_tickets(min: Optional[int] = None, max: Optional[int] = None, db: 
                             detail="Internal server error get tickets")
 
 
-@routers.get("/ticket/{ticket_id}", response_model=schemas.Ticket)
+@routers.get("/ticket/{ticket_id}", tags=["tickets"])
 async def get_ticket(ticket_id: int, db: Session = Depends(get_db)):
     """ Get ticket by id where ticket and flight are not deleted and flight departure date is greater than current date """
     db_ticket = crud.Ticket.get_by_id(db, ticket_id)
     if db_ticket is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket not found")
-    return db_ticket
+        return {"error": "Ticket not found"}
+    return schemas.Ticket.from_orm(db_ticket)
 
 
-@routers.post("/ticket")
+@routers.post("/ticket", tags=["tickets"])
 async def create_ticket(ticket: schemas.TicketCreate, hard: bool = False, soft: bool = False,
                         db: Session = Depends(get_db)):
     """
@@ -446,18 +454,18 @@ async def create_ticket(ticket: schemas.TicketCreate, hard: bool = False, soft: 
         db_flight = crud.Flight.get_by_id(db, ticket.flight_id)
         if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
                 db_flight.departure_date < datetime.now():
-            return {"error": "Flight not found"}
+            return {"error": "Flight not found or flight is not on sale or flight is deleted or flight departure date is less than current date"}
         if db_flight.left_seats <= 0:
             return {"error": "No seats left"}
 
         return crud.Ticket.create(db, ticket, db_flight, hard, soft)
     except Exception as e:
-        # print(logging.error(e))
+        print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/ticket/{ticket_id}", response_model=schemas.Ticket)
+@routers.patch("/ticket/{ticket_id}", tags=["tickets"])
 async def update_ticket(ticket_id: int, ticket: schemas.TicketUpdate, db: Session = Depends(get_db)):
     """
     Update ticket by id\n
@@ -476,14 +484,14 @@ async def update_ticket(ticket_id: int, ticket: schemas.TicketUpdate, db: Sessio
             if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
                     db_flight.departure_date < datetime.now():
                 return {"error": "Flight not found"}
-        return crud.Ticket.update(db, ticket_id, ticket)
+        return schemas.Ticket.from_orm(crud.Ticket.update(db, db_ticket, ticket))
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/ticket/{ticket_id}")
+# @routers.delete("/ticket/{ticket_id}", tags=["tickets"])
 async def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
     """
     Delete ticket by id\n
@@ -491,14 +499,17 @@ async def delete_ticket(ticket_id: int, db: Session = Depends(get_db)):
     * ticket cannot be deleted is already deleted
     """
     try:
-        return crud.Ticket.delete(db, ticket_id)
+        db_ticket = crud.Ticket.get_by_id(db, ticket_id)
+        if db_ticket is None or db_ticket.deleted_at is not None:
+            return {"error": "Ticket not found"}
+        return crud.Ticket.delete(db, db_ticket)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.post("/ticket/cancellation")
+@routers.post("/ticket/cancellation", tags=["tickets"])
 async def cancel_ticket_add_to_agent_fine(ticket_cancel: schemas.TicketCancel, db: Session = Depends(get_db)):
     """
     Cancel ticket and add fine to agent will bу added to flight left seats\n
@@ -518,7 +529,7 @@ async def cancel_ticket_add_to_agent_fine(ticket_cancel: schemas.TicketCancel, d
 
 
 # region Booking
-@routers.get("/bookings", response_model=list[schemas.Booking])
+@routers.get("/bookings", response_model=list[schemas.Booking], tags=["bookings"])
 async def get_bookings(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Get bookings list where booking is not deleted and flight departure date is greater than current date and flight is not deleted
@@ -532,18 +543,18 @@ async def get_bookings(min: Optional[int] = None, max: Optional[int] = None, db:
                             detail="Internal server error get bookings")
 
 
-@routers.get("/booking/{booking_id}", response_model=schemas.Booking)
+@routers.get("/booking/{booking_id}", tags=["bookings"])
 async def get_booking(booking_id: int, db: Session = Depends(get_db)):
     """
     Get booking by id where booking is not deleted and flight departure date is greater than current date and flight is not deleted
     """
     db_booking = crud.Booking.get_by_id(db, booking_id)
     if db_booking is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
-    return db_booking
+        return {"error": "Booking not found"}
+    return schemas.Booking.from_orm(db_booking)
 
 
-@routers.post("/booking")
+@routers.post("/booking", tags=["bookings"])
 async def create_booking(booking: schemas.BookingCreate, db: Session = Depends(get_db)):
     """
     Create booking
@@ -565,12 +576,12 @@ async def create_booking(booking: schemas.BookingCreate, db: Session = Depends(g
 
         return crud.Booking.create(db, booking, db_flight)
     except Exception as e:
-        # print(logging.error(e))
+        print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/booking/{booking_id}")
+@routers.patch("/booking/{booking_id}", tags=["bookings"])
 async def update_booking(booking_id: int, booking: schemas.BookingUpdate, db: Session = Depends(get_db)):
     """
     Update booking by id\n
@@ -597,10 +608,13 @@ async def update_booking(booking_id: int, booking: schemas.BookingUpdate, db: Se
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/booking/{booking_id}")
+@routers.delete("/booking/{booking_id}", tags=["bookings"])
 async def delete_booking(booking_id: int, db: Session = Depends(get_db)):
     """ Delete booking by id """
     try:
+        db_booking = crud.Booking.get_by_id(db, booking_id)
+        if db_booking is None or db_booking.deleted_at is not None:
+            return {"error": "Booking not found"}
         return crud.Booking.delete(db, booking_id)
     except Exception as e:
         print(logging.error(e))
@@ -612,7 +626,7 @@ async def delete_booking(booking_id: int, db: Session = Depends(get_db)):
 
 
 # region Scraped Price
-@routers.get("/scraped_prices", response_model=list[schemas.ScrapedPrice])
+@routers.get("/scraped_prices", response_model=list[schemas.ScrapedPrice], tags=["scraped_prices"])
 async def get_scraped_prices(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
     """ Get scraped prices list """
     try:
@@ -624,14 +638,14 @@ async def get_scraped_prices(min: Optional[int] = None, max: Optional[int] = Non
                             detail="Internal server error get scraped prices")
 
 
-@routers.get("/scraped_price/{scraped_price_id}", response_model=schemas.ScrapedPrice)
+@routers.get("/scraped_price/{scraped_price_id}", tags=["scraped_prices"])
 async def get_scraped_price(scraped_price_id: int, db: Session = Depends(get_db)):
     """ Get scraped price by id """
     try:
         db_scraped_price = crud.ScrapedPrice.get_by_id(db, scraped_price_id)
         if db_scraped_price is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scraped price not found")
-        return db_scraped_price
+            return {"error": "Scraped price not found"}
+        return schemas.ScrapedPrice.from_orm(db_scraped_price)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
@@ -639,7 +653,7 @@ async def get_scraped_price(scraped_price_id: int, db: Session = Depends(get_db)
                             detail="Internal server error get scraped price")
 
 
-@routers.post("/scraped_price")
+@routers.post("/scraped_price", tags=["scraped_prices"])
 async def create_scraped_price(scraped_price: schemas.ScrapedPriceCreate, db: Session = Depends(get_db)):
     """ Create scraped price """
     try:
@@ -650,25 +664,27 @@ async def create_scraped_price(scraped_price: schemas.ScrapedPriceCreate, db: Se
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/scraped_price/{scraped_price_id}", response_model=schemas.ScrapedPrice)
+@routers.patch("/scraped_price/{scraped_price_id}", tags=["scraped_prices"])
 async def update_scraped_price(scraped_price_id: int, scraped_price: schemas.ScrapedPriceUpdate,
                                db: Session = Depends(get_db)):
     try:
         db_scraped_price = crud.ScrapedPrice.get_by_id(db, scraped_price_id)
         if db_scraped_price is None:
             return {"error": "Scraped price not found"}
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scraped price not found")
-        return crud.ScrapedPrice.update(db, scraped_price_id, scraped_price)
+        return crud.ScrapedPrice.update(db, db_scraped_price, scraped_price)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/scraped_price/{scraped_price_id}")
+@routers.delete("/scraped_price/{scraped_price_id}", tags=["scraped_prices"])
 async def delete_scraped_price(scraped_price_id: int, db: Session = Depends(get_db)):
     try:
-        return crud.ScrapedPrice.delete(db, scraped_price_id)
+        db_scraped_price = crud.ScrapedPrice.get_by_id(db, scraped_price_id)
+        if db_scraped_price is None:
+            return {"error": "Scraped price not found"}
+        return crud.ScrapedPrice.delete(db, db_scraped_price)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
@@ -679,7 +695,7 @@ async def delete_scraped_price(scraped_price_id: int, db: Session = Depends(get_
 
 
 # region Gender
-@routers.get("/genders", response_model=list[schemas.Gender])
+@routers.get("/genders", response_model=list[schemas.Gender], tags=['genders'])
 async def get_genders(db: Session = Depends(get_db), min: Optional[int] = None, max: Optional[int] = None):
     try:
         return crud.Gender.get_list(db, min, max)
@@ -689,15 +705,15 @@ async def get_genders(db: Session = Depends(get_db), min: Optional[int] = None, 
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.get("/gender/{gender_id}", response_model=schemas.Gender)
+@routers.get("/gender/{gender_id}", tags=['genders'])
 async def get_gender(gender_id: int, db: Session = Depends(get_db)):
     db_gender = crud.Gender.get_by_id(db, gender_id)
     if db_gender is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gender not found")
-    return db_gender
+        return {"error": "Gender not found"}
+    return schemas.Gender.from_orm(db_gender)
 
 
-@routers.post("/gender")
+@routers.post("/gender", tags=['genders'])
 async def create_gender(gender: schemas.GenderCreate, db: Session = Depends(get_db)):
     try:
         return crud.Gender.create(db, gender)
@@ -707,21 +723,20 @@ async def create_gender(gender: schemas.GenderCreate, db: Session = Depends(get_
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.patch("/gender/{gender_id}", response_model=schemas.Gender)
+@routers.patch("/gender/{gender_id}", tags=["genders"])
 async def update_gender(gender_id: int, gender: schemas.GenderUpdate, db: Session = Depends(get_db)):
     try:
         db_gender = crud.Gender.get_by_id(db, gender_id)
         if db_gender is None:
             return {"error": "Gender not found"}
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gender not found")
-        return crud.Gender.update(db, gender_id, gender)
+        return crud.Gender.update(db, db_gender, gender)
     except Exception as e:
         print(logging.error(e))
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
-@routers.delete("/gender/{gender_id}")
+@routers.delete("/gender/{gender_id}", tags=["genders"])
 async def delete_gender(gender_id: int, db: Session = Depends(get_db)):
     try:
         return crud.Gender.delete(db, gender_id)
@@ -801,6 +816,7 @@ async def get_agent_debts(agent_id: int, db: Session = Depends(get_db), min: Opt
         print(logging.error(traceback.format_exc()))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
+
 # endregion
 
 
@@ -834,7 +850,8 @@ async def create_ticket_class(ticket_class: schemas.TicketClassCreate, db: Sessi
 
 
 @routers.patch("/ticket_class/{ticket_class_id}", response_model=schemas.TicketClass)
-async def update_ticket_class(ticket_class_id: int, ticket_class: schemas.TicketClassUpdate, db: Session = Depends(get_db)):
+async def update_ticket_class(ticket_class_id: int, ticket_class: schemas.TicketClassUpdate,
+                              db: Session = Depends(get_db)):
     try:
         db_ticket_class = crud.TicketClass.get_by_id(db, ticket_class_id)
         if db_ticket_class is None:

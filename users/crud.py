@@ -217,6 +217,9 @@ class Agent:
         db.commit()
         return db_agent
 
+    def get_by_user_id(db: Session, user_id: int):
+        return db.query(models.Agent).filter(models.Agent.user_id == user_id).first()
+
 
 class Discount:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):

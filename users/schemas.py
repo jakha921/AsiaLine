@@ -329,6 +329,8 @@ class Agent(AgentUpdate):
     discount_id: Optional[int]
     block_date: Optional[datetime]
     registered_date: Optional[datetime]
+    bookings: list
+
 
     class Config:
         orm_mode = True
@@ -338,6 +340,7 @@ class Agent(AgentUpdate):
                 **AgentCreate.Config.schema_extra.get("example"),
                 "block_date": "2021-01-01 00:00:00",
                 "registered_date": "2021-01-01 00:00:00",
+                "bookings": []
             }
         }
 

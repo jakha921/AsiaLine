@@ -45,6 +45,7 @@ class CountryUpdate(CountryCreate):
 
 class Country(CountryCreate):
     id: int
+    cities: list
 
     class Config:
         orm_mode = True
@@ -52,6 +53,7 @@ class Country(CountryCreate):
             "example": {
                 "id": 1,
                 **CountryCreate.Config.schema_extra.get("example"),
+                "cities": []
             }
         }
 
@@ -90,6 +92,7 @@ class CityUpdate(CityCreate):
 
 class City(CityCreate):
     id: int
+    airports: list
 
     class Config:
         orm_mode = True
@@ -97,6 +100,7 @@ class City(CityCreate):
             "example": {
                 "id": 1,
                 **CityCreate.Config.schema_extra.get("example"),
+                "airports": []
             }
         }
 
@@ -130,7 +134,7 @@ class AirportCreate(BaseModel):
 
 class AirportUpdate(AirportCreate):
     airport_ru: Optional[str]
-    city_id: Optional[str]
+    city_id: Optional[int]
 
 
 class Airport(AirportCreate):
@@ -199,11 +203,6 @@ class FlightCreate(BaseModel):
             raise ValueError('arrival_date must be greater than departure_date')
         return v
 
-    @validator('on_sale')
-    def on_sale_must_be_greater_than_current_date(cls, v):
-        if v < datetime.now():
-            raise ValueError('on_sale must be greater than current date')
-        return v
 
     @validator('price')
     def price_must_be_greater_than_0(cls, v):
@@ -263,6 +262,8 @@ class Flight(FlightUpdate):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]
+    tickets: list
+    # price_history: list
 
     class Config:
         orm_mode = True
@@ -274,6 +275,8 @@ class Flight(FlightUpdate):
                 "created_at": "2021-07-01T10:00:00",
                 "updated_at": "2021-07-01T10:00:00",
                 "deleted_at": "2021-07-01T10:00:00",
+                "tickets": [],
+                # "price_history": []
             }
         }
 
