@@ -143,6 +143,7 @@ def sort_tickets(tickets) -> list:
             ticket = tick['Ticket']
 
             ticket_dict = {
+                'agent_id': ticket.agent_id,
                 "id": ticket.id,
                 "ticket_number": ticket.ticket_number,
                 "price": ticket.price,
@@ -218,7 +219,9 @@ def sorted_payments(payments):
             payment_dict = {
                 "id": refill.id,
                 "created_at": refill.created_at.strftime("%Y-%m-%d %H:%M"),
+                "agent_id": agent.id,
                 "agent": agent.company_name,
+                "user_id": user.id,
                 "user": user.username,
                 "amount": refill.amount,
                 "comment": refill.comment

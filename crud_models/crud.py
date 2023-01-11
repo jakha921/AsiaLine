@@ -113,7 +113,6 @@ class Airport:
 
 class FlightPriceHistory:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
-        print(min, max)
         if min and max:
             return db.query(models.FlightPriceHistory).offset(min).limit(max).all()
         return db.query(models.FlightPriceHistory).all()
@@ -261,7 +260,6 @@ class Ticket:
             ticket = db_ticket['Ticket']
             agent = db_ticket['Agent']
             flight = db_ticket['Flight']
-            print(agent.balance)
 
             ticket.deleted_at = datetime.now()
             agent.balance -= ticket_cancel.fine
@@ -275,8 +273,6 @@ class Ticket:
             db.add(db_agent_debt)
             db.commit()
             db.refresh(db_agent_debt)
-
-            print(agent.balance)
 
             return {"message": "Ticket deleted successfully and fine added to agent balance"}
         except Exception as e:
@@ -328,10 +324,8 @@ class Booking:
 
     def update(db: Session, patch: schemas.BookingUpdate, booking: models.Booking, flight: models.Flight):
         """ find difference between old and new booking and update models Flight left_seats """
-        print('before', flight.left_seats)
 
         diff = booking.hard_block + booking.soft_block - patch.hard_block - patch.soft_block
-        print('diff', diff)
         flight.left_seats += diff
         if flight.left_seats < 0:
             return {'message': 'Flight has not enough seats'}
@@ -340,7 +334,6 @@ class Booking:
             if value is not None:
                 setattr(booking, key, value)
         db.commit()
-        print('after', flight.left_seats)
         return booking
 
     def delete(db: Session, booking_id: int):
@@ -423,11 +416,9 @@ class Flight:
                 Ticket.cancel(db, ticket_schema)
             for booking in db_booking:
                 Booking.delete(db, booking.id)
-            print(flight)
             flight.deleted_at = datetime.now()
-            # db.commit()
-            return flight
-            # return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}
+            db.commit()
+            return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}
         except Exception as e:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
@@ -454,7 +445,7 @@ class Flight:
 class ScrapedPrice:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
         if min and max:
-            return db.query(models.ScrapedPrice)\
+            return db.query(models.ScrapedPrice) \
                 .filter(
                 models.Flight.id == models.ScrapedPrice.flight_id,
                 models.Flight.deleted_at == None,
@@ -562,8 +553,6 @@ class Refill:
         refill_db = db_refill['Refill']
         agent = db_refill['Agent']
 
-        print('before', agent.balance)
-
         agent.balance += refill.amount - refill_db.amount
 
         for key, value in refill.dict().items():
@@ -571,7 +560,6 @@ class Refill:
                 setattr(refill_db, key, value)
 
         db.commit()
-        print('after', agent.balance)
         return refill_db
 
     def delete(db: Session, refill_id: int):
@@ -583,15 +571,10 @@ class Refill:
             db_refill = refill_db['Refill']
             agent = refill_db['Agent']
 
-            if db_refill is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Refill not found")
-            agent.balance -= db_refill.amount
-
-            if db_refill is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Refill not found")
-
             if db_refill.deleted_at is not None:
                 return {"message": "Refill already deleted"}
+
+            agent.balance -= db_refill.amount
 
             db_refill.deleted_at = datetime.now()
             db.commit()
@@ -600,9 +583,8 @@ class Refill:
             print(logging.error(traceback.format_exc()))
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
-# Agent Debt
+
 class AgentDebt:
-    # get list of agent debts with agent id
     def get_list(db: Session, agent_id: int, min: Optional[int], max: Optional[int]):
         if min and max:
             return db.query(models.AgentDebt).filter(models.AgentDebt.agent_id == agent_id).offset(min).limit(max).all()
@@ -625,19 +607,15 @@ class TicketClass:
         db.refresh(db_ticket_class)
         return db_ticket_class
 
-    def update(db: Session, ticket_class_id: int, ticket_class: schemas.TicketClassUpdate):
-        db_ticket_class = db.query(models.TicketClass).filter(models.TicketClass.id == ticket_class_id).first()
+    def update(db: Session, db_ticket_class: models.TicketClass, ticket_class: schemas.TicketClassUpdate):
         for key, value in ticket_class.dict().items():
             if value is not None:
                 setattr(db_ticket_class, key, value)
         db.commit()
         return db_ticket_class
 
-    def delete(db: Session, ticket_class_id: int):
+    def delete(db: Session, db_ticket_class: models.TicketClass):
         try:
-            db_ticket_class = db.query(models.TicketClass).filter(models.TicketClass.id == ticket_class_id).first()
-            if db_ticket_class is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ticket class not found")
             db.delete(db_ticket_class)
             db.commit()
             return {"message": "Ticket class deleted successfully"}

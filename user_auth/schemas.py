@@ -5,7 +5,7 @@ class UserSchema(BaseModel):
     fullname: str
     email: EmailStr
     password: str
-    role: str
+    role_id: str
 
     class Config:
         schema_extra = {
@@ -13,7 +13,7 @@ class UserSchema(BaseModel):
                 "fullname": "Joe Doe",
                 "email": "joe@xyz.com",
                 "password": "any",
-                "role": "admin"
+                "role_id": "1"
             }
         }
 

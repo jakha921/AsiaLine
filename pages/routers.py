@@ -127,10 +127,11 @@ async def get_flight_quotas(db: Session = Depends(get_db),
 @routers.get("/tickets/main")
 async def get_tickets(db: Session = Depends(get_db),
                       from_date: Optional[date] = datetime.now().date(),
-                      to_date: Optional[date] = datetime.now().date()):
+                      to_date: Optional[date] = datetime.now().date(),
+                      agent_id: Optional[int] = None):
     """ Get tickets by flights where departure date is not past now """
     try:
-        db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date, to_date)
+        db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date, to_date, agent_id)
         sorted_tickets = sort.sort_tickets(db_tickets)
         currency_rate = api.get_currency_last_item(db)
 
@@ -180,10 +181,10 @@ async def get_roles(db: Session = Depends(get_db)):
 async def get_tickets(db: Session = Depends(get_db),
                       from_date: Optional[date] = datetime.now().date() - timedelta(days=7),
                       to_date: Optional[date] = datetime.now().date(),
-                      ):
+                      agent_id: Optional[int] = None):
     """ get all payments who paid amount of agents for fill the balance """
     try:
-        db_payments = api.get_tickets_by_agent_id(db, from_date, to_date)
+        db_payments = api.get_tickets_by_agent_id(db, from_date, to_date, agent_id)
         sorted_payments = sort.sorted_payments(db_payments)
         return {
             'payments_count': len(sorted_payments),
@@ -203,10 +204,10 @@ async def get_agent_balances(db: Session = Depends(get_db),
 
 # agents
 @routers.get("/agents/main")
-async def get_agents(db: Session = Depends(get_db)):
+async def get_agents(db: Session = Depends(get_db), agent_id: Optional[int] = None):
     """ Get all agents and their discounts """
     try:
-        db_agents = api.get_agents_discounts(db)
+        db_agents = api.get_agents_discounts(db, agent_id)
         sorted_agents = sort.sorted_agents(db_agents)
         return sorted_agents
     except Exception as e:
