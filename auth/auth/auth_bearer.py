@@ -1,8 +1,8 @@
-# The goal of this file is to check whether the reques tis authorized or not [ verification of the proteced route]
+# Checkout JWT token from request header
 from fastapi import Request, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from user_auth.auth.auth_handler import decode_jwt
+from auth.auth.auth_handler import decode_jwt
 
 
 class JWTBearer(HTTPBearer):

@@ -1,0 +1,36 @@
+applicationName: avialine
+replicas: 1
+
+
+env:
+  - name: env
+    value: "staging"
+envFrom:
+  - secretRef:
+      name: avialine-secret
+
+ingress:
+  host: apitest.asialine.ru
+
+services:
+  - name: avialine
+    port: 8000
+
+command:  ["/bin/bash", "-c", "uvicorn main:app --reload --port 8000 --host 0.0.0.0"]
+
+job:
+  name: avialine-db-migrate-job
+  command: ["/bin/bash", "-c", "alembic upgrade head"]
+
+
+
+affinity: staging-nodes
+tolerations: staging-nodes
+
+image:
+  repository: registry.gitlab.com/devsymfony/avialine
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: docker-registry

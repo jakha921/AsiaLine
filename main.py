@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import Response
 
-from user_auth.routers import router as jwt_router
 from users.routers import routers as app_router
 from crud_models.routers import routers as crud_router
 from pages.routers import routers as logics_router
@@ -23,11 +22,9 @@ async def db_session_middleware(request: Request, call_next):
 
 
 # include router
-# app.include_router(jwt_router, prefix="/auth")
 app.include_router(app_router)
 app.include_router(crud_router)
 app.include_router(logics_router, prefix="", tags=["pages"])
-
 
 if __name__ == "__main__":
     import uvicorn
