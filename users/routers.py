@@ -5,10 +5,26 @@ from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
 
+from auth.auth.auth_bearer import JWTBearer
+from auth.auth.auth_handler import check_permissions, sign_jwt
+from auth.hashing import decode_password
 from users import crud, schemas
 from db.database import get_db
 
 routers = APIRouter()
+
+
+# authentication
+@routers.post("/user/login", tags=["auth"])
+def user_login(user: schemas.UserLoginSchema, db: Session = Depends(get_db)):
+    """ Check user credentials and return a JWT token from the user email and role in db """
+    query = crud.User.get_by_email(db, user.email)
+    if query:
+        if decode_password(query.password) == user.password:
+            return sign_jwt(id=query.id, email=query.email, permissions=crud.User.get_permissions(db, query.id))
+    return {
+        "error": "Wrong login details!"
+    }
 
 
 # region Roles
@@ -16,10 +32,13 @@ routers = APIRouter()
 async def get_all_roles(
         min: Optional[int] = None,
         max: Optional[int] = None,
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db),
+        jwt: dict = Depends(JWTBearer())
 ):
     """ Get list of roles """
-    return crud.Role.get_list(db, min, max)
+    if check_permissions('get_roles', jwt):
+        return crud.Role.get_list(db, min, max)
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to access this route")
 
 
 @routers.get("/role/{role_id}", response_model=schemas.Role, tags=["roles"])

@@ -2,7 +2,6 @@ from fastapi import Depends, APIRouter
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime, date, timedelta
-import traceback
 import logging
 
 from db.database import get_db
@@ -17,7 +16,6 @@ async def get_currency_rate(db: Session = Depends(get_db)):
     try:
         return api.get_currency_last_item(db)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -30,7 +28,6 @@ async def get_dates_and_count_flights(db: Session = Depends(get_db),
         dates_range = api.get_flights_by_range_departure_date(db, from_date, to_date)
         return sort.sort_by_date_flights(dates_range)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -141,7 +138,6 @@ async def get_tickets(db: Session = Depends(get_db),
         }
         return result
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -157,7 +153,6 @@ async def get_users(db: Session = Depends(get_db)):
             'users': sorted_users
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -171,7 +166,6 @@ async def get_roles(db: Session = Depends(get_db)):
             'roles': db_roles
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -190,7 +184,6 @@ async def get_tickets(db: Session = Depends(get_db),
             'payments': sorted_payments
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -210,7 +203,6 @@ async def get_agents(db: Session = Depends(get_db)):
         sorted_agents = sort.sorted_agents(db_agents)
         return sorted_agents
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -220,7 +212,6 @@ async def get_discounts(db: Session = Depends(get_db)):
     try:
         return api.get_discounts(db)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -235,7 +226,6 @@ async def get_airports(db: Session = Depends(get_db)):
             'airports': db_airports
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -250,7 +240,6 @@ async def get_cities(db: Session = Depends(get_db)):
             'cities': db_cities
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -265,7 +254,6 @@ async def get_countries(db: Session = Depends(get_db)):
             'countries': db_countries
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
@@ -280,5 +268,4 @@ async def get_ticket_classes(db: Session = Depends(get_db)):
             'ticket_classes': db_classes
         }
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
         print(logging.error(e))

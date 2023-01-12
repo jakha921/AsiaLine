@@ -3,7 +3,19 @@ from datetime import datetime
 from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional
 
-from db.models import Language
+
+# Auth
+class UserLoginSchema(BaseModel):
+    email: EmailStr
+    password: str
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "email": "user1@gmail.com",
+                "password": "12345678"
+            }
+        }
 
 
 # region Role
@@ -329,8 +341,10 @@ class Agent(AgentUpdate):
     discount_id: Optional[int]
     block_date: Optional[datetime]
     registered_date: Optional[datetime]
-    bookings: list
 
+    # bookings: list
+    # role_permissions: list
+    # tickets: list
 
     class Config:
         orm_mode = True
@@ -340,7 +354,9 @@ class Agent(AgentUpdate):
                 **AgentCreate.Config.schema_extra.get("example"),
                 "block_date": "2021-01-01 00:00:00",
                 "registered_date": "2021-01-01 00:00:00",
-                "bookings": []
+                # "bookings": [],
+                "role_permissions": [],
+                "tickets": [],
             }
         }
 

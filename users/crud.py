@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from user_auth.hashing import encode_password, decode_password
+from auth.hashing import encode_password, decode_password
 from users import schemas
 from db import models
 
@@ -84,6 +84,15 @@ class User:
         db.delete(db_user)
         db.commit()
         return {"success": "User deleted successfully"}
+
+    def get_permissions(db: Session, user_id: int):
+        """ get all permissions of a user, based on his role_id, role_permission and permission tables """
+        query = db.query(models.Permission.alias). \
+            filter(models.Permission.id == models.RolePermission.permission_id). \
+            filter(models.RolePermission.role_id == models.User.role_id). \
+            filter(models.User.id == user_id).all()
+        return [permission.alias for permission in query]
+
 
 
 class Section:
