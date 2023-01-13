@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, APIRouter
 from jwt.auth import AuthHandler
 from jwt.schemas import AuthToken
 
@@ -17,14 +17,13 @@ def register(auth: AuthToken):
     return {'message': 'User created successfully'}
 
 @router.post("/login")
-# checkout db and return user token
 def login(auth: AuthToken):
-    user = [x for x in user if x['username'] == auth.username]
-    if not user:
+    user_ = [x for x in user if x['username'] == auth.username]
+    if not user_:
         raise HTTPException(status_code=404, detail='User not found')
-    if not auth_handler.verify_password(auth.password, user[0]['password']):
-        raise HTTPException(status_code=404, detail='Incorrect password')
-    return {'access_token': auth_handler.encode_token(user[0]['username']), 'token_type': 'bearer'}
+    if not auth_handler.verify_password(auth.password, user_[0]['password']):
+        raise HTTPException(status_code=400, detail='Incorrect password')
+    return {'access_token': auth_handler.encode_token(auth.username)}
 
 @router.get("/unprotected")
 def unprotected():

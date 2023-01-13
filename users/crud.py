@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from auth.hashing import encode_password, decode_password
 from users import schemas
 from db import models
 
@@ -48,18 +49,20 @@ class User:
 
     def get_by_id(db: Session, user_id: int):
         user = db.query(models.User).filter(models.User.id == user_id).first()
-        if user is None:
-            return {"message": "User not found"}
-        if user.deleted_at is None:
-            return user
-        else:
-            return {"message": "User deleted"}
+        if user:
+            # decode user password
+            user.password = decode_password(user.password)
+        return user
 
     def get_by_email(db: Session, email: str):
-        return db.query(models.User).filter(models.User.email == email).first()
+        return db.query(
+            models.User
+        ).filter(models.User.email == email).first()
 
     def create(db: Session, user: schemas.UserCreate):
         db_user = models.User(**user.dict())
+        #     hash password and save user
+        db_user.password = encode_password(db_user.password)
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
@@ -67,6 +70,9 @@ class User:
 
     def update(db: Session, user_id: int, user: schemas.UserUpdate):
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
+        #    hash password and save user
+        if db_user.password != encode_password(user.password):
+            user.password = encode_password(user.password)
         for key, value in user.dict().items():
             if value is not None:
                 setattr(db_user, key, value)
@@ -75,12 +81,18 @@ class User:
 
     def delete(db: Session, user_id: int):
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
-        if db_user.deleted_at is None:
-            db_user.deleted_at = datetime.now()
-        else:
-            return {"message": "User already deleted"}
+        db.delete(db_user)
         db.commit()
-        return {"message": "User deleted"}
+        return {"success": "User deleted successfully"}
+
+    def get_permissions(db: Session, user_id: int):
+        """ get all permissions of a user, based on his role_id, role_permission and permission tables """
+        query = db.query(models.Permission.alias). \
+            filter(models.Permission.id == models.RolePermission.permission_id). \
+            filter(models.RolePermission.role_id == models.User.role_id). \
+            filter(models.User.id == user_id).all()
+        return [permission.alias for permission in query]
+
 
 
 class Section:
@@ -108,10 +120,11 @@ class Section:
         return db_section
 
     def delete(db: Session, section_id: int):
-        db_section = db.query(models.Section).filter(models.Section.id == section_id).first()
-        db.delete(db_section)
+        """ get section by id and delete all permissions related to it than delete section """
+        db.query(models.Permission).filter(models.Permission.section_id == section_id).delete()
+        db.query(models.Section).filter(models.Section.id == section_id).delete()
         db.commit()
-        return db_section
+        return {"success": "Section deleted successfully with all permissions related to it"}
 
 
 class Permission:
@@ -180,11 +193,17 @@ class RolePermission:
 class Agent:
     def get_list(db: Session, min: Optional[int], max: Optional[int]):
         if min and max:
-            return db.query(models.Agent).offset(min).limit(max).all()
-        return db.query(models.Agent).all()
+            return db.query(models.Agent).filter(
+                models.Agent.block_date == None
+            ).offset(min).limit(max).all()
+        return db.query(models.Agent).filter(
+            models.Agent.block_date == None
+        ).all()
 
     def get_by_id(db: Session, agent_id: int):
-        return db.query(models.Agent).filter(models.Agent.id == agent_id).first()
+        return db.query(models.Agent).filter(
+            models.Agent.id == agent_id,
+            models.Agent.block_date == None).first()
 
     def create(db: Session, agent: schemas.AgentCreate):
         db_agent = models.Agent(**agent.dict())
@@ -203,9 +222,12 @@ class Agent:
 
     def delete(db: Session, agent_id: int):
         db_agent = db.query(models.Agent).filter(models.Agent.id == agent_id).first()
-        db.delete(db_agent)
+        db_agent.block_date = datetime.now()
         db.commit()
         return db_agent
+
+    def get_by_user_id(db: Session, user_id: int):
+        return db.query(models.Agent).filter(models.Agent.user_id == user_id).first()
 
 
 class Discount:

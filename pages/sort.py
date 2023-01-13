@@ -57,15 +57,7 @@ def sort_airport(db, airport_id):
     return airport_dict
 
 
-def sort_flights(db, flights, lang='ru') -> list:
-    if lang == "en":
-        lang = "en"
-    elif lang == "uz":
-        lang = "uz"
-    else:
-        lang = "ru"
-
-    # add to end
+def sort_flights(db, flights) -> list:
     sorted_flights = []
     for flight in flights:
         from_airport = sort_airport(db, flight.from_airport_id)
@@ -78,16 +70,24 @@ def sort_flights(db, flights, lang='ru') -> list:
             "price": flight.price,
             "currency": flight.currency,
             "from_airport": {
-                "id": from_airport.get("id"),
-                "airport": from_airport.get(f"airport_{lang}") if from_airport.get(f"airport_{lang}") else None,
+                "id": from_airport["id"],
+                "airport_ru": from_airport["airport_ru"],
+                "airport_en": from_airport["airport_en"],
+                "airport_uz": from_airport["airport_uz"],
+                "city_ru": from_airport["city"][f"city_ru"],
+                "city_en": from_airport["city"][f"city_en"],
+                "city_uz": from_airport["city"][f"city_uz"],
                 "short_name": from_airport.get("short_name") if from_airport.get("short_name") else None,
-                "city": from_airport["city"][f"city_{lang}"] if from_airport["city"][f"city_{lang}"] else None,
             },
             "to_airport": {
                 "id": to_airport.get("id"),
-                "airport": to_airport.get(f"airport_{lang}") if to_airport.get(f"airport_{lang}") else None,
+                "airport_ru": to_airport["airport_ru"],
+                "airport_en": to_airport["airport_en"],
+                "airport_uz": to_airport["airport_uz"],
+                "city_ru": to_airport["city"][f"city_ru"],
+                "city_en": to_airport["city"][f"city_en"],
+                "city_uz": to_airport["city"][f"city_uz"],
                 "short_name": to_airport.get("short_name") if to_airport.get("short_name") else None,
-                "city": to_airport["city"][f"city_{lang}"] if to_airport["city"][f"city_{lang}"] else None,
             },
             "total_seats": flight.total_seats,
             "left_seats": flight.left_seats,
@@ -103,67 +103,49 @@ def sort_flights(db, flights, lang='ru') -> list:
     return sorted_flights
 
 
-# check it do not used
-def sort_booking_add_into_sorted_flights(quotes):
-    """ quotes["Booking"].flight_id == quotes["Flight"].id add booking into sorted_flights """
-    sorted_flights = []
-    for quote in quotes:
-        flight = quote["Flight"]
-        booking = quote["Booking"]
-        from_airport = quote["Flight"].from_airport
-        to_airport = quote["Flight"].to_airport
-        flight_dict = {
+def sort_flight_quotas(flight_quotas) -> list:
+    sorted_flight_quotas = []
+    for flight_quota in flight_quotas:
+        agent = flight_quota['Agent']
+        flight = flight_quota['Flight']
+        booking = flight_quota['Booking']
+
+        quotas = {
             "id": flight.id,
             "flight_number": flight.flight_number,
             "departure_date": flight.departure_date.strftime("%Y-%m-%d %H:%M:%S"),
             "arrival_date": flight.arrival_date.strftime("%Y-%m-%d %H:%M:%S"),
             "price": flight.price,
             "currency": flight.currency,
-            "from_airport": flight.from_airport_id,
-            "to_airport": flight.to_airport_id,
             "total_seats": flight.total_seats,
             "left_seats": flight.left_seats,
-            "on_sale": flight.on_sale,
-            "actor": flight.actor_id,
-            "created_at": flight.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "updated_at": flight.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-            # "deleted_at": flight.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if flight.deleted_at else None,
+            "agent": agent.company_name,
             "booking": {
                 "id": booking.id,
-                "flight_id": booking.flight_id,
-                "agent_id": booking.agent_id,
-                "actor_id": booking.actor_id,
-                "is_hard_blocked": booking.is_hard_block,
-                "sets_count": booking.sets_count,
+                "hard_block": booking.hard_block,
+                "soft_block": booking.soft_block,
                 "price": booking.price,
                 "currency": booking.currency,
-            }
+                "created_at": booking.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": booking.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            },
         }
-
-        sorted_flights.append(flight_dict)
-
-    return sorted_flights
+        sorted_flight_quotas.append(quotas)
+    return sorted_flight_quotas
 
 
-def sort_tickets(tickets, lang='ru') -> list:
+def sort_tickets(tickets) -> list:
     """ flight_id, agent_id, quota """
     try:
-        if lang == "en":
-            lang = "en"
-        elif lang == "uz":
-            lang = "uz"
-        else:
-            lang = "ru"
-
-        # add to end
         sorted_tickets = []
         for tick in tickets:
             flight = tick['Flight']
             ticket = tick['Ticket']
 
             ticket_dict = {
+                'agent_id': ticket.agent_id,
                 "id": ticket.id,
-                "ticket_number": "?",
+                "ticket_number": ticket.ticket_number,
                 "price": ticket.price,
                 "currency": ticket.currency,
                 'surname': ticket.surname,
@@ -212,6 +194,9 @@ def sort_users(passengers) -> list:
                 "username": passenger.username,
                 "date_joined": passenger.date_joined,
                 "role": role.name,
+                "role_ru": role.title_ru,
+                "role_en": role.title_en,
+                "role_uz": role.title_uz,
             }
 
             sorted_passengers.append(passenger_dict)
@@ -225,32 +210,24 @@ def sort_users(passengers) -> list:
 
 def sorted_payments(payments):
     try:
-        sort_payments = []
+        sorted_payments = []
         for pay in payments:
-            ticket = pay['Ticket']
-            transaction = pay['Transaction']
-            payment_system = pay['PaymentSystem']
+            refill = pay['Refill']
+            agent = pay['Agent']
+            user = pay['User']
 
             payment_dict = {
-                "id": ticket.id,
-                "ticket_created_at": ticket.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "agent_id": ticket.agent_id,
-                "full_name": f"{ticket.surname} {ticket.first_name} {ticket.middle_name}" if ticket.middle_name else f"{ticket.surname} {ticket.first_name}",
-                "is_online_payment": transaction.is_online_payment,
-                "payment_system": {
-                    "id": payment_system.id,
-                    "name": payment_system.name,
-                    "icon": payment_system.icon,
-                    "is_active": payment_system.is_active,
-                },
-                "price": ticket.price,
-                "currency": ticket.currency,
-                "comment": ticket.comment
+                "id": refill.id,
+                "created_at": refill.created_at.strftime("%Y-%m-%d %H:%M"),
+                "agent_id": agent.id,
+                "agent": agent.company_name,
+                "user_id": user.id,
+                "user": user.username,
+                "amount": refill.amount,
+                "comment": refill.comment
             }
-
-            sort_payments.append(payment_dict)
-
-        return sort_payments
+            sorted_payments.append(payment_dict)
+        return sorted_payments
 
     except Exception as e:
         print(logging.error(traceback.format_exc()))
@@ -264,21 +241,19 @@ def sorted_agents(agents):
         for agen in agents:
             agent = agen['Agent']
             discount = agen['Discount']
+            user = agen['User']
 
             agent_dict = {
                 "id": agent.id,
                 "name": agent.company_name,
-                "discount": {
-                    "id": discount.id,
-                    "formula": discount.amount,
-                    "description": discount.name,
-                }
+                "login": user.email,
+                "discount": discount.amount,
+                "discount_name": discount.name,
+                "balance": agent.balance,
+                "is_on_credit": agent.is_on_credit,
             }
-
             sort_agents.append(agent_dict)
-
         return sort_agents
-
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))

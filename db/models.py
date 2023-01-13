@@ -1,15 +1,12 @@
-from enum import Enum
 from datetime import datetime
-
 
 from sqlalchemy.orm import relationship
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Date, Float
 
-
 from db.database import Base
 
 
-class Language(str, Enum):    
+class Language(str, Enum):
     ru = "Russian"
     en = "English"
     uz = "Uzbek"
@@ -17,7 +14,7 @@ class Language(str, Enum):
 
 class Role(Base):
     __tablename__ = "roles"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String(255), nullable=False)
     title_ru = Column(String(255), nullable=False)
@@ -31,7 +28,7 @@ class Role(Base):
 
 class User(Base):
     __tablename__ = "users"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
@@ -45,15 +42,14 @@ class User(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=True)
 
     role = relationship("Role", backref="users")
-    
-    
+
     def __repr__(self):
         return f"User(id={self.id}, email={self.email}, username={self.username}, role_id={self.role_id})"
 
 
 class Discount(Base):
     __tablename__ = "discounts"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     amount = Column(Integer, nullable=False, default=0)
     name = Column(String(255), nullable=True)
@@ -64,7 +60,7 @@ class Discount(Base):
 
 class Agent(Base):
     __tablename__ = "agents"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     company_name = Column(String(255), nullable=False)
@@ -93,12 +89,12 @@ class Section(Base):
     name_uz = Column(String(255), nullable=True)
 
     def __repr__(self):
-        return f"Section(id={self.id}, name={self.name})"
+        return f"Section(id={self.id}, name={self.name_ru})"
 
 
 class Permission(Base):
     __tablename__ = "permissions"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     section_id = Column(Integer, ForeignKey("sections.id"), nullable=True)
     alias = Column(String(255), nullable=False)
@@ -110,18 +106,18 @@ class Permission(Base):
     section = relationship("Section", backref="permissions")
 
     def __repr__(self):
-        return f"Permission(id={self.id}, name={self.name})"
+        return f"Permission(id={self.id}, name={self.title_ru})"
 
 
 class RolePermission(Base):
     __tablename__ = "role_permissions"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     permission_id = Column(Integer, ForeignKey("permissions.id"), nullable=False)
 
-    role = relationship("Role", backref="permissions")
-    permission = relationship("Permission", backref="roles")
+    role = relationship("Role", backref="role_permissions")
+    permission = relationship("Permission", backref="role_permissions")
 
     def __repr__(self):
         return f"RolePermission(id={self.id}, role_id={self.role_id}, permission_id={self.permission_id})"
@@ -129,7 +125,7 @@ class RolePermission(Base):
 
 class Country(Base):
     __tablename__ = "countries"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     country_ru = Column(String(255), nullable=False)
     country_en = Column(String(255), nullable=True)
@@ -143,7 +139,7 @@ class Country(Base):
 
 class City(Base):
     __tablename__ = "cities"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     city_ru = Column(String(255), nullable=False)
     city_en = Column(String(255), nullable=True)
@@ -158,7 +154,7 @@ class City(Base):
 
 class Airport(Base):
     __tablename__ = "airports"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     airport_ru = Column(String(255), nullable=False)
     airport_en = Column(String(255), nullable=True)
@@ -180,7 +176,7 @@ class CurrencyCode(str, Enum):
 
 class Flight(Base):
     __tablename__ = "flights"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     flight_number = Column(String(255), nullable=False)
     from_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
@@ -196,18 +192,22 @@ class Flight(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
-    
+
     from_airport = relationship("Airport", foreign_keys=[from_airport_id])
     to_airport = relationship("Airport", foreign_keys=[to_airport_id])
     actor = relationship("User", backref="flights")
 
     def __repr__(self):
-        return f"Flight(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, to_airport_id={self.to_airport_id}, departure_date={self.departure_date}, arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, actor_id={self.actor_id})"
+        return f"Flight(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, " \
+               f"to_airport_id={self.to_airport_id}, departure_date={self.departure_date}, " \
+               f"arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, " \
+               f"total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, " \
+               f"actor_id={self.actor_id})"
 
 
 class FlightPriceHistory(Base):
     __tablename__ = "flight_price_history"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
     new_price = Column(Integer, default=0)
@@ -218,12 +218,13 @@ class FlightPriceHistory(Base):
     flight = relationship("Flight", backref="price_history")
 
     def __repr__(self):
-        return f"FlightPriceHistory(id={self.id}, flight_id={self.flight_id}, new_price={self.new_price}, currency={self.currency})"
+        return f"FlightPriceHistory(id={self.id}, flight_id={self.flight_id}, new_price={self.new_price}, " \
+               f"currency={self.currency})"
 
 
 class ScrapedPrice(Base):
     __tablename__ = "scraped_prices"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
     price = Column(Integer, default=0)
@@ -234,12 +235,13 @@ class ScrapedPrice(Base):
     flight = relationship("Flight", backref="scraped_prices")
 
     def __repr__(self):
-        return f"ScrapedPrice(id={self.id}, flight_id={self.flight_id}, price={self.price}, currency={self.currency}, name={self.name})"
+        return f"ScrapedPrice(id={self.id}, flight_id={self.flight_id}, price={self.price}, " \
+               f"currency={self.currency}, name={self.name})"
 
 
 class Booking(Base):
     __tablename__ = "bookings"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
@@ -255,7 +257,7 @@ class Booking(Base):
     flight = relationship("Flight", backref="bookings")
     agent = relationship("Agent", backref="bookings")
     actor = relationship("User", backref="bookings")
-    
+
     def __repr__(self):
         return f"Booking(id={self.id}, flight_id={self.flight_id}, actor_id={self.actor_id}), agent_id={self.agent_id})"
 
@@ -268,7 +270,7 @@ class Platform(str, Enum):
 
 class Passenger(Base):
     __tablename__ = "passengers"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String(255), nullable=False)
     login = Column(String(255), nullable=False)
@@ -278,14 +280,14 @@ class Passenger(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
-    
+
     def __repr__(self):
         return f"Passenger(id={self.id}, login={self.login})"
 
 
 class Gender(Base):
     __tablename__ = 'genders'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     gender_ru = Column(String(255), nullable=False)
     gender_en = Column(String(255), nullable=True)
@@ -298,7 +300,7 @@ class Gender(Base):
 
 class TicketClass(Base):
     __tablename__ = 'ticket_classes'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name_ru = Column(String(255), nullable=False)
     name_en = Column(String(255), nullable=True)
@@ -312,7 +314,7 @@ class TicketClass(Base):
 
 class TicketStatus(Base):
     __tablename__ = 'ticket_statuses'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name_ru = Column(String(255), nullable=False)
     name_en = Column(String(255), nullable=True)
@@ -324,7 +326,7 @@ class TicketStatus(Base):
 
 class Ticket(Base):
     __tablename__ = "tickets"
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     ticket_number = Column(String(255), nullable=False)
     flight_id = Column(Integer, ForeignKey("flights.id"), nullable=False)
@@ -350,7 +352,7 @@ class Ticket(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
-    
+
     flight = relationship("Flight", backref="tickets")
     agent = relationship("Agent", backref="tickets")
     passenger = relationship("Passenger", backref="tickets")
@@ -359,37 +361,38 @@ class Ticket(Base):
     discount = relationship("Discount", backref="tickets")
     status = relationship("TicketStatus", backref="tickets")
     actor = relationship("User", backref="tickets")
-    
+
     def __repr__(self):
-        return f"Ticket(id={self.id}, flight_id={self.flight_id}, passenger_id={self.passenger_id}), agent_id={self.agent_id})"
+        return f"Ticket(id={self.id}, flight_id={self.flight_id}, passenger_id={self.passenger_id}), " \
+               f"agent_id={self.agent_id})"
 
 
 class PaymentSystem(Base):
     __tablename__ = 'payment_systems'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     name = Column(String(255), nullable=False)
     icon = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True)
-    
+
     def __repr__(self):
         return f"PaymentSystem(id={self.id}, name={self.name})"
 
 
 class TransactionStatus(Base):
     __tablename__ = 'transaction_statuses'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     alias = Column(String(255), nullable=False)
     description = Column(String(255), nullable=True)
-    
+
     def __repr__(self):
         return f"TransactionStatus(id={self.id}, alias={self.alias})"
 
 
 class Transaction(Base):
     __tablename__ = 'transactions'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     passenger_id = Column(Integer, ForeignKey("passengers.id"), nullable=False)
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)
@@ -408,14 +411,15 @@ class Transaction(Base):
     ticket = relationship("Ticket", backref="transactions")
     payment_system = relationship("PaymentSystem", backref="transactions")
     status = relationship("TransactionStatus", backref="transactions")
-    
+
     def __repr__(self):
-        return f"Transaction(id={self.id}, passenger={self.passenger}, ticket={self.ticket}, payment_system={self.payment_system}, status={self.status})"
+        return f"Transaction(id={self.id}, passenger={self.passenger}, ticket={self.ticket}, " \
+               f"payment_system={self.payment_system}, status={self.status})"
 
 
 class CurrencyRate(Base):
     __tablename__ = 'currency_rates'
-    
+
     id = Column(Integer, primary_key=True, index=True, unique=True)
     rub_to_usd = Column(Float, default=0)
     rub_to_eur = Column(Float, default=0)

@@ -35,12 +35,12 @@ def update_currency_rate(db: Session):
 
 
 def get_currency_last_item(db: Session):
-    """ Get last currency rate if updated_at <= 8 hours, update currency rate """
+    """ Get last currency rate if updated_at <= 24 hours, update currency rate """
     db_currency_rate = db.query(models.CurrencyRate).order_by(models.CurrencyRate.updated_at.desc()).first()
     if not db_currency_rate:
         update_currency_rate(db)
         get_currency_last_item(db)
-    if db_currency_rate.updated_at <= datetime.now() - timedelta(hours=8):
+    if db_currency_rate.updated_at <= datetime.now() - timedelta(hours=24):
         db_currency_rate = update_currency_rate(db)
 
     return db_currency_rate
@@ -85,8 +85,11 @@ def get_tickets_by_flight_id(db: Session, flight_id):
             models.Ticket
         ).filter(
             models.Ticket.deleted_at == None,
-            models.Ticket.flight_id == flight_id
-        ).order_by(models.Ticket.created_at).all()
+            models.Ticket.flight_id == flight_id,
+            models.Flight.id == models.Ticket.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()
+        ).order_by(models.Ticket.created_at, models.Flight.departure_date).all()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
@@ -110,30 +113,46 @@ def get_quotas_by_flight_id(db, from_date, to_date):
     try:
         from_date, to_date = add_time(from_date, to_date)
 
-        # my_case_stmt = case(
-        #     [
-        #         (models.Booking.flight_id == , 1),
-        #         (MyTable.hit_type == 'hard', 3)
-        #     ]
-        # )
-
+    #     get models Flight, Agent and Booking
         return db.query(
-            models.Flight, models.Booking
+            models.Flight,
+            models.Agent,
+            models.Booking,
         ).filter(
             models.Flight.deleted_at == None,
             models.Flight.departure_date >= from_date,
             models.Flight.departure_date <= to_date,
-        ).order_by(models.Flight.departure_date).all()
+            models.Flight.on_sale <= from_date,
+            models.Flight.id == models.Booking.flight_id,
+            models.Booking.deleted_at == None,
+            models.Agent.id == models.Booking.agent_id,
+        ).order_by(models.Flight.departure_date,
+                     models.Flight.on_sale).all()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date):
+def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date, agent_id):
     """ get tickets by departure_date is >= now and on_sale <= now """
     try:
         from_date, to_date = add_time(from_date, to_date)
-        return db.query(
+        if agent_id:
+            return db.query(
+                models.Flight, models.Ticket, models.TicketStatus
+            ).filter(
+                models.Flight.deleted_at == None,
+                models.Flight.departure_date >= from_date,
+                models.Flight.departure_date <= to_date,
+                models.Flight.on_sale <= from_date,
+                models.Ticket.flight_id == models.Flight.id,
+                models.Ticket.deleted_at == None,
+                models.Ticket.agent_id == agent_id,
+                models.TicketStatus.id == models.Ticket.status_id
+
+            ).order_by(models.Flight.departure_date, models.Ticket.created_at).all()
+
+        return  db.query(
             models.Flight, models.Ticket, models.TicketStatus
         ).filter(
             models.Flight.deleted_at == None,
@@ -178,25 +197,25 @@ def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id):
         from_date, to_date = add_time(from_date, to_date)
         if agent_id:
             return db.query(
-                models.Ticket, models.Transaction, models.PaymentSystem
+                models.Refill, models.Agent, models.User
             ).filter(
-                models.Ticket.deleted_at == None,
-                models.Ticket.created_at >= from_date,
-                models.Ticket.created_at <= to_date,
-                models.Ticket.agent_id == agent_id,
-                models.Transaction.ticket_id == models.Ticket.id,
-                models.PaymentSystem.id == models.Transaction.payment_system_id
-            ).order_by(models.Ticket.created_at.desc()).all()
-        else:
-            return db.query(
-                models.Ticket, models.Transaction, models.PaymentSystem
-            ).filter(
-                models.Ticket.deleted_at == None,
-                models.Ticket.created_at >= from_date,
-                models.Ticket.created_at <= to_date,
-                models.Transaction.ticket_id == models.Ticket.id,
-                models.PaymentSystem.id == models.Transaction.payment_system_id
-            ).order_by(models.Ticket.created_at.desc()).all()
+                models.Refill.deleted_at == None,
+                models.Refill.created_at >= from_date,
+                models.Refill.created_at <= to_date,
+                models.Refill.agent_id == agent_id,
+                models.Agent.id == models.Refill.agent_id,
+                models.User.id == models.Refill.receiver_id
+            ).order_by(models.Refill.created_at).all()
+
+        return db.query(
+            models.Refill, models.Agent, models.User
+        ).filter(
+            models.Refill.deleted_at == None,
+            models.Refill.created_at >= from_date,
+            models.Refill.created_at <= to_date,
+            models.Agent.id == models.Refill.agent_id,
+            models.User.id == models.Refill.receiver_id,
+        ).order_by(models.Refill.created_at.desc()).all()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
@@ -223,14 +242,25 @@ def get_agents_balance(db: Session, agent_id):
         print(logging.error(e))
 
 
-def get_agents_discounts(db: Session):
+def get_agents_discounts(db: Session, agent_id):
     """ get agents and discounts by agent_id """
     try:
+        if agent_id:
+            return db.query(
+                models.Agent, models.Discount
+            ).filter(
+                models.Agent.id == agent_id,
+                models.Agent.discount_id == models.Discount.id,
+                models.Agent.deleted_at == None,
+                models.User.id == models.Agent.user_id
+            ).all()
+
         return db.query(
-            models.Agent, models.Discount
+            models.Agent, models.Discount, models.User
         ).filter(
             models.Agent.discount_id == models.Discount.id,
-            models.Agent.deleted_at == None
+            models.Agent.deleted_at == None,
+            models.User.id == models.Agent.user_id
         ).all()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
