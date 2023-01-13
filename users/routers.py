@@ -1,5 +1,4 @@
 import logging
-import traceback
 
 from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
@@ -30,14 +29,14 @@ def user_login(user: schemas.UserLoginSchema, db: Session = Depends(get_db)):
 # region Roles
 @routers.get("/roles", response_model=list[schemas.Role], tags=["roles"])
 async def get_all_roles(
-        min: Optional[int] = None,
-        max: Optional[int] = None,
+        offset: Optional[int] = None,
+        limit: Optional[int] = None,
         db: Session = Depends(get_db),
         jwt: dict = Depends(JWTBearer())
 ):
     """ Get list of roles """
     if check_permissions('get_roles', jwt):
-        return crud.Role.get_list(db, min, max)
+        return crud.Role.get_list(db, offset, limit)
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to access this route")
 
 
@@ -77,10 +76,10 @@ async def delete_role(role_id: int, db: Session = Depends(get_db)):
 # region User
 @routers.get("/users", response_model=list[schemas.User], tags=["users"])
 async def get_users_list(
-        min: Optional[int] = None,
-        max: Optional[int] = None,
+        offset: Optional[int] = None,
+        limit: Optional[int] = None,
         db: Session = Depends(get_db)):
-    return crud.User.get_list(db, min, max)
+    return crud.User.get_list(db, offset, limit)
 
 
 @routers.get("/user/{user_id}", tags=["users"])
@@ -90,7 +89,7 @@ async def get_user(
     try:
         return schemas.User.from_orm(crud.User.get_by_id(db, user_id))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -104,7 +103,7 @@ async def create_user(user: schemas.UserCreate,
         return schemas.User.from_orm(crud.User.create(db, user))
 
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -124,7 +123,7 @@ async def update_user(user_id: int,
 
         return schemas.User.from_orm(crud.User.update(db, user_id, user))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -137,7 +136,7 @@ async def delete_user(user_id: int,
             return {"error": "User not found"}
         return crud.User.delete(db, user_id)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -147,13 +146,13 @@ async def delete_user(user_id: int,
 # region Section
 @routers.get("/sections", response_model=list[schemas.Section], tags=["sections"])
 async def get_sections_list(
-        min: Optional[int] = None,
-        max: Optional[int] = None,
+        offset: Optional[int] = None,
+        limit: Optional[int] = None,
         db: Session = Depends(get_db)):
     try:
-        return crud.Section.get_list(db, min, max)
+        return crud.Section.get_list(db, offset, limit)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -165,7 +164,7 @@ async def get_section(section_id: int, db: Session = Depends(get_db)):
             return {"error": "Section not found"}
         return schemas.Section.from_orm(db_section)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -176,7 +175,7 @@ async def create_section(
     try:
         return schemas.Section.from_orm(crud.Section.create(db, section))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -191,7 +190,7 @@ async def update_section(
             return {"error": "Section not found"}
         return schemas.Section.from_orm(crud.Section.update(db, section_id, section))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -203,7 +202,7 @@ async def delete_section(section_id: int, db: Session = Depends(get_db)):
             return {"error": "Section not found"}
         return crud.Section.delete(db, section_id)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -212,8 +211,9 @@ async def delete_section(section_id: int, db: Session = Depends(get_db)):
 
 # region Permission
 @routers.get("/permissions", tags=["permissions"])
-async def get_permissions_list(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
-    return crud.Permission.get_list(db, min, max)
+async def get_permissions_list(offset: Optional[int] = None, limit: Optional[int] = None,
+                               db: Session = Depends(get_db)):
+    return crud.Permission.get_list(db, offset, limit)
 
 
 @routers.get("/permission/{permission_id}", tags=["permissions"])
@@ -224,7 +224,7 @@ async def get_permission(permission_id: int, db: Session = Depends(get_db)):
             return {"detail": "Permission not found"}
         return db_permission
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -241,7 +241,7 @@ async def update_permission(permission_id: int, permission: schemas.PermissionUp
             return {"detail": "Permission not found"}
         return schemas.Permission.from_orm(crud.Permission.update(db, permission_id, permission))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -253,7 +253,7 @@ async def delete_permission(permission_id: int, db: Session = Depends(get_db)):
             return {"detail": "Permission not found"}
         return crud.Permission.delete(db, permission_id)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -263,13 +263,13 @@ async def delete_permission(permission_id: int, db: Session = Depends(get_db)):
 # region Role Permission
 @routers.get("/role_permissions", response_model=list[schemas.RolePermission], tags=["role-permissions"])
 async def get_role_permissions_list(
-        min: Optional[int] = None,
-        max: Optional[int] = None,
+        offset: Optional[int] = None,
+        limit: Optional[int] = None,
         db: Session = Depends(get_db)):
     try:
-        return crud.RolePermission.get_list(db, min, max)
+        return crud.RolePermission.get_list(db, offset, limit)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -281,7 +281,7 @@ async def get_role_permission(role_permission_id: int, db: Session = Depends(get
             return {"detail": "Role Permission not found"}
         return schemas.RolePermission.from_orm(db_role_permission)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -290,7 +290,7 @@ async def create_role_permission(role_permission: schemas.RolePermissionCreate, 
     try:
         return crud.RolePermission.create(db, role_permission)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -305,7 +305,7 @@ async def update_role_permission(
             return {"detail": "Role Permission not found"}
         return schemas.RolePermission.from_orm(crud.RolePermission.update(db, role_permission_id, role_permission))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -317,7 +317,7 @@ async def delete_role_permission(role_permission_id: int, db: Session = Depends(
             return {"detail": "Group permission not found"}
         return crud.RolePermission.delete(db, role_permission_id)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -326,11 +326,11 @@ async def delete_role_permission(role_permission_id: int, db: Session = Depends(
 
 # region Agent
 @routers.get("/agents", response_model=list[schemas.Agent], tags=["agents"])
-async def get_agents_list(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
+async def get_agents_list(offset: Optional[int] = None, limit: Optional[int] = None, db: Session = Depends(get_db)):
     try:
-        return crud.Agent.get_list(db, min, max)
+        return crud.Agent.get_list(db, offset, limit)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -342,7 +342,7 @@ async def get_agent(agent_id: int, db: Session = Depends(get_db)):
             return {"detail": "Agent not found"}
         return schemas.Agent.from_orm(db_agent)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -353,7 +353,7 @@ async def create_agent(agent: schemas.AgentCreate, db: Session = Depends(get_db)
             return {"detail": "This user is already an agent"}
         return schemas.Agent.from_orm(crud.Agent.create(db, agent))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -367,7 +367,7 @@ async def update_agent(agent_id: int, agent: schemas.AgentUpdate, db: Session = 
             return {"detail": "This user is already an agent"}
         return schemas.Agent.from_orm(crud.Agent.update(db, agent_id, agent))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -379,7 +379,7 @@ async def delete_agent(agent_id: int, db: Session = Depends(get_db)):
             return {"detail": "Agent not found"}
         return crud.Agent.delete(db, agent_id)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -388,11 +388,11 @@ async def delete_agent(agent_id: int, db: Session = Depends(get_db)):
 
 # region Discount
 @routers.get("/discounts", response_model=list[schemas.Discount], tags=["discounts"])
-async def get_discounts_list(min: Optional[int] = None, max: Optional[int] = None, db: Session = Depends(get_db)):
+async def get_discounts_list(offset: Optional[int] = None, limit: Optional[int] = None, db: Session = Depends(get_db)):
     try:
-        return crud.Discount.get_list(db, min, max)
+        return crud.Discount.get_list(db, offset, limit)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -404,7 +404,7 @@ async def get_discount(discount_id: int, db: Session = Depends(get_db)):
             return {"detail": "Discount not found"}
         return schemas.Discount.from_orm(db_discount)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -413,7 +413,7 @@ async def create_discount(discount: schemas.DiscountCreate, db: Session = Depend
     try:
         return schemas.Discount.from_orm(crud.Discount.create(db, discount))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -425,7 +425,7 @@ async def update_discount(discount_id: int, discount: schemas.DiscountUpdate, db
             return {"detail": "Discount not found"}
         return schemas.Discount.from_orm(crud.Discount.update(db, discount_id, discount))
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 
@@ -437,7 +437,7 @@ async def delete_discount(discount_id: int, db: Session = Depends(get_db)):
             return {"detail": "Discount not found"}
         return crud.Discount.delete(db, discount_id)
     except Exception as e:
-        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
 
 # endregion Discount
