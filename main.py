@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import Response
+from fastapi.middleware.cors import CORSMiddleware
 
 from users.routers import routers as app_router
 from crud_models.routers import routers as crud_router
@@ -9,6 +10,21 @@ from db.database import SessionLocal
 
 app = FastAPI()
 
+origins = ["*"]
+#     "http://asialine.ru",
+#     "https://apitest.asialine.ru",
+#     "http://localhost",
+#     "http://localhost:8080",
+#     "http://localhost:3000",
+# ]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):
