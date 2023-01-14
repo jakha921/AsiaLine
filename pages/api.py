@@ -85,8 +85,11 @@ def get_tickets_by_flight_id(db: Session, flight_id):
             models.Ticket
         ).filter(
             models.Ticket.deleted_at == None,
-            models.Ticket.flight_id == flight_id
-        ).order_by(models.Ticket.created_at).all()
+            models.Ticket.flight_id == flight_id,
+            models.Flight.id == models.Ticket.flight_id,
+            models.Flight.deleted_at == None,
+            models.Flight.departure_date >= datetime.now()
+        ).order_by(models.Ticket.created_at, models.Flight.departure_date).all()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
@@ -130,11 +133,26 @@ def get_quotas_by_flight_id(db, from_date, to_date):
         print(logging.error(e))
 
 
-def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date):
+def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date, agent_id):
     """ get tickets by departure_date is >= now and on_sale <= now """
     try:
         from_date, to_date = add_time(from_date, to_date)
-        return db.query(
+        if agent_id:
+            return db.query(
+                models.Flight, models.Ticket, models.TicketStatus
+            ).filter(
+                models.Flight.deleted_at == None,
+                models.Flight.departure_date >= from_date,
+                models.Flight.departure_date <= to_date,
+                models.Flight.on_sale <= from_date,
+                models.Ticket.flight_id == models.Flight.id,
+                models.Ticket.deleted_at == None,
+                models.Ticket.agent_id == agent_id,
+                models.TicketStatus.id == models.Ticket.status_id
+
+            ).order_by(models.Flight.departure_date, models.Ticket.created_at).all()
+
+        return  db.query(
             models.Flight, models.Ticket, models.TicketStatus
         ).filter(
             models.Flight.deleted_at == None,
@@ -173,10 +191,21 @@ def get_all_roles(db: Session):
 
 
 # get tickets by agent_id
-def get_tickets_by_agent_id(db: Session, from_date, to_date):
+def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id):
     """ get tickets by departure_date is >= now and on_sale <= now """
     try:
         from_date, to_date = add_time(from_date, to_date)
+        if agent_id:
+            return db.query(
+                models.Refill, models.Agent, models.User
+            ).filter(
+                models.Refill.deleted_at == None,
+                models.Refill.created_at >= from_date,
+                models.Refill.created_at <= to_date,
+                models.Refill.agent_id == agent_id,
+                models.Agent.id == models.Refill.agent_id,
+                models.User.id == models.Refill.receiver_id
+            ).order_by(models.Refill.created_at).all()
 
         return db.query(
             models.Refill, models.Agent, models.User
@@ -185,7 +214,7 @@ def get_tickets_by_agent_id(db: Session, from_date, to_date):
             models.Refill.created_at >= from_date,
             models.Refill.created_at <= to_date,
             models.Agent.id == models.Refill.agent_id,
-            models.User.id == models.Agent.user_id
+            models.User.id == models.Refill.receiver_id,
         ).order_by(models.Refill.created_at.desc()).all()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
@@ -213,9 +242,19 @@ def get_agents_balance(db: Session, agent_id):
         print(logging.error(e))
 
 
-def get_agents_discounts(db: Session):
+def get_agents_discounts(db: Session, agent_id):
     """ get agents and discounts by agent_id """
     try:
+        if agent_id:
+            return db.query(
+                models.Agent, models.Discount
+            ).filter(
+                models.Agent.id == agent_id,
+                models.Agent.discount_id == models.Discount.id,
+                models.Agent.deleted_at == None,
+                models.User.id == models.Agent.user_id
+            ).all()
+
         return db.query(
             models.Agent, models.Discount, models.User
         ).filter(
