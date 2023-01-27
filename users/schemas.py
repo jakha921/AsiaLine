@@ -12,7 +12,7 @@ class UserLoginSchema(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "email": "user1@gmail.com",
+                "email": "user@gmail.com",
                 "password": "12345678"
             }
         }
@@ -302,7 +302,7 @@ class AgentCreate(BaseModel):
     phone: Optional[str]
     registered_date: Optional[datetime]
     is_on_credit: Optional[bool] = False
-    discount_id: Optional[int]
+    discount_id: int
 
     class Config:
         schema_extra = {
@@ -317,9 +317,15 @@ class AgentCreate(BaseModel):
         }
 
 
-class AgentUpdate(AgentCreate):
+class AgentUpdate(BaseModel):
     user_id: Optional[int]
     company_name: Optional[str]
+    balance: Optional[float]
+    address: Optional[str]
+    phone: Optional[str]
+    registered_date: Optional[datetime]
+    is_on_credit: Optional[bool] = False
+    discount_id: Optional[int]
 
     class Config:
         schema_extra = {

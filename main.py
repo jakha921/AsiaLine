@@ -26,6 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 @app.middleware("http")
 async def db_session_middleware(request: Request, call_next):
     response = Response("Internet server error", status_code=500)

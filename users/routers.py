@@ -35,14 +35,16 @@ async def get_all_roles(
         jwt: dict = Depends(JWTBearer())
 ):
     """ Get list of roles """
-    if check_permissions('get_roles', jwt):
-        return crud.Role.get_list(db, offset, limit)
-    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You don't have permission to access this route")
+    if not check_permissions('get_roles', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    return crud.Role.get_list(db, offset, limit)
 
 
 @routers.get("/role/{role_id}", response_model=schemas.Role, tags=["roles"])
-async def get_role(role_id: int, db: Session = Depends(get_db)):
+async def get_role(role_id: int, db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
     """ get role by given id """
+    if not check_permissions('get_role', jwt):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access denied")
     db_role = crud.Role.get_by_id(db, role_id)
     if db_role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
@@ -50,12 +52,17 @@ async def get_role(role_id: int, db: Session = Depends(get_db)):
 
 
 @routers.post("/role", response_model=schemas.Role, tags=["roles"])
-async def create_role(role: schemas.RoleCreate, db: Session = Depends(get_db)):
+async def create_role(role: schemas.RoleCreate, db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('create_role', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return crud.Role.create(db, role)
 
 
 @routers.patch("/role/{role_id}", response_model=schemas.Role, tags=["roles"])
-async def update_role(role_id: int, role: schemas.RoleUpdate, db: Session = Depends(get_db)):
+async def update_role(role_id: int, role: schemas.RoleUpdate, db: Session = Depends(get_db),
+                      jwt: dict = Depends(JWTBearer())):
+    if check_permissions('update_role', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_role = crud.Role.get_by_id(db, role_id)
     if db_role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
@@ -63,7 +70,9 @@ async def update_role(role_id: int, role: schemas.RoleUpdate, db: Session = Depe
 
 
 @routers.delete("/role/{role_id}", response_model=schemas.Role, tags=["roles"])
-async def delete_role(role_id: int, db: Session = Depends(get_db)):
+async def delete_role(role_id: int, db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('delete_role', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_role = crud.Role.get_by_id(db, role_id)
     if db_role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
@@ -78,24 +87,33 @@ async def delete_role(role_id: int, db: Session = Depends(get_db)):
 async def get_users_list(
         offset: Optional[int] = None,
         limit: Optional[int] = None,
-        db: Session = Depends(get_db)):
+        db: Session = Depends(get_db),
+        jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('get_users', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return crud.User.get_list(db, offset, limit)
 
 
 @routers.get("/user/{user_id}", tags=["users"])
 async def get_user(
         user_id: int,
-        db: Session = Depends(get_db)):
+        db: Session = Depends(get_db),
+        jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('get_user', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         return schemas.User.from_orm(crud.User.get_by_id(db, user_id))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/user", tags=["users"])
 async def create_user(user: schemas.UserCreate,
-                      db: Session = Depends(get_db)):
+                      db: Session = Depends(get_db),
+                      jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('create_user', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_user = crud.User.get_by_email(db, user.email)
         if db_user:
@@ -104,13 +122,16 @@ async def create_user(user: schemas.UserCreate,
 
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.patch("/user/{user_id}", tags=["users"])
 async def update_user(user_id: int,
                       user: schemas.UserUpdate,
-                      db: Session = Depends(get_db)):
+                      db: Session = Depends(get_db),
+                      jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('update_user', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_user = crud.User.get_by_id(db, user_id)
         if db_user is None:
@@ -124,12 +145,15 @@ async def update_user(user_id: int,
         return schemas.User.from_orm(crud.User.update(db, user_id, user))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/user/{user_id}", tags=["users"])
 async def delete_user(user_id: int,
-                      db: Session = Depends(get_db)):
+                      db: Session = Depends(get_db),
+                      jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('delete_user', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_user = crud.User.get_by_id(db, user_id)
         if db_user is None:
@@ -137,7 +161,7 @@ async def delete_user(user_id: int,
         return crud.User.delete(db, user_id)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # endregion User
@@ -153,7 +177,7 @@ async def get_sections_list(
         return crud.Section.get_list(db, offset, limit)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/section/{section_id}", tags=["sections"])
@@ -165,7 +189,7 @@ async def get_section(section_id: int, db: Session = Depends(get_db)):
         return schemas.Section.from_orm(db_section)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/section", tags=["sections"])
@@ -176,7 +200,7 @@ async def create_section(
         return schemas.Section.from_orm(crud.Section.create(db, section))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.patch("/section/{section_id}", tags=["sections"])
@@ -191,7 +215,7 @@ async def update_section(
         return schemas.Section.from_orm(crud.Section.update(db, section_id, section))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/section/{section_id}", tags=["sections"])
@@ -203,7 +227,7 @@ async def delete_section(section_id: int, db: Session = Depends(get_db)):
         return crud.Section.delete(db, section_id)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # endregion Section
@@ -225,7 +249,7 @@ async def get_permission(permission_id: int, db: Session = Depends(get_db)):
         return db_permission
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/permission", tags=["permissions"])
@@ -242,7 +266,7 @@ async def update_permission(permission_id: int, permission: schemas.PermissionUp
         return schemas.Permission.from_orm(crud.Permission.update(db, permission_id, permission))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/permission/{permission_id}", tags=["permissions"])
@@ -254,7 +278,7 @@ async def delete_permission(permission_id: int, db: Session = Depends(get_db)):
         return crud.Permission.delete(db, permission_id)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # endregion Permission
@@ -270,7 +294,7 @@ async def get_role_permissions_list(
         return crud.RolePermission.get_list(db, offset, limit)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/role_permission/{role_permission_id}", tags=["role-permissions"])
@@ -282,7 +306,7 @@ async def get_role_permission(role_permission_id: int, db: Session = Depends(get
         return schemas.RolePermission.from_orm(db_role_permission)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/role_permission", response_model=schemas.RolePermission, tags=["role-permissions"])
@@ -291,7 +315,7 @@ async def create_role_permission(role_permission: schemas.RolePermissionCreate, 
         return crud.RolePermission.create(db, role_permission)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.patch("/role_permission/{role_permission_id}", tags=["role-permissions"])
@@ -306,7 +330,7 @@ async def update_role_permission(
         return schemas.RolePermission.from_orm(crud.RolePermission.update(db, role_permission_id, role_permission))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/role_permission/{role_permission_id}", tags=["role-permissions"])
@@ -318,7 +342,7 @@ async def delete_role_permission(role_permission_id: int, db: Session = Depends(
         return crud.RolePermission.delete(db, role_permission_id)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # endregion Group Permission
@@ -326,16 +350,21 @@ async def delete_role_permission(role_permission_id: int, db: Session = Depends(
 
 # region Agent
 @routers.get("/agents", response_model=list[schemas.Agent], tags=["agents"])
-async def get_agents_list(offset: Optional[int] = None, limit: Optional[int] = None, db: Session = Depends(get_db)):
+async def get_agents_list(offset: Optional[int] = None, limit: Optional[int] = None, db: Session = Depends(get_db),
+                          jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('get_agents', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         return crud.Agent.get_list(db, offset, limit)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/agent/{agent_id}", tags=["agents"])
-async def get_agent(agent_id: int, db: Session = Depends(get_db)):
+async def get_agent(agent_id: int, db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('get_agent', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_agent = crud.Agent.get_by_id(db, agent_id)
         if db_agent is None:
@@ -343,22 +372,27 @@ async def get_agent(agent_id: int, db: Session = Depends(get_db)):
         return schemas.Agent.from_orm(db_agent)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/agent", tags=["agents"])
-async def create_agent(agent: schemas.AgentCreate, db: Session = Depends(get_db)):
+async def create_agent(agent: schemas.AgentCreate, db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('create_agent', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         if crud.Agent.get_by_user_id(db, agent.user_id):
             return {"detail": "This user is already an agent"}
         return schemas.Agent.from_orm(crud.Agent.create(db, agent))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.patch("/agent/{agent_id}", tags=["agents"])
-async def update_agent(agent_id: int, agent: schemas.AgentUpdate, db: Session = Depends(get_db)):
+async def update_agent(agent_id: int, agent: schemas.AgentUpdate, db: Session = Depends(get_db),
+                       jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('update_agent', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_agent = crud.Agent.get_by_id(db, agent_id)
         if db_agent is None:
@@ -368,11 +402,13 @@ async def update_agent(agent_id: int, agent: schemas.AgentUpdate, db: Session = 
         return schemas.Agent.from_orm(crud.Agent.update(db, agent_id, agent))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/agent/{agent_id}", tags=["agents"])
-async def delete_agent(agent_id: int, db: Session = Depends(get_db)):
+async def delete_agent(agent_id: int, db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
+    if not check_permissions('delete_agent', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_agent = crud.Agent.get_by_id(db, agent_id)
         if db_agent is None:
@@ -380,7 +416,7 @@ async def delete_agent(agent_id: int, db: Session = Depends(get_db)):
         return crud.Agent.delete(db, agent_id)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # endregion Agent
@@ -393,7 +429,7 @@ async def get_discounts_list(offset: Optional[int] = None, limit: Optional[int] 
         return crud.Discount.get_list(db, offset, limit)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/discount/{discount_id}", tags=["discounts"])
@@ -405,7 +441,7 @@ async def get_discount(discount_id: int, db: Session = Depends(get_db)):
         return schemas.Discount.from_orm(db_discount)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/discount", tags=["discounts"])
@@ -414,7 +450,7 @@ async def create_discount(discount: schemas.DiscountCreate, db: Session = Depend
         return schemas.Discount.from_orm(crud.Discount.create(db, discount))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.patch("/discount/{discount_id}", tags=["discounts"])
@@ -426,7 +462,7 @@ async def update_discount(discount_id: int, discount: schemas.DiscountUpdate, db
         return schemas.Discount.from_orm(crud.Discount.update(db, discount_id, discount))
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/discount/{discount_id}", tags=["discounts"])
@@ -438,6 +474,6 @@ async def delete_discount(discount_id: int, db: Session = Depends(get_db)):
         return crud.Discount.delete(db, discount_id)
     except Exception as e:
         print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal server error")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 # endregion Discount

@@ -174,7 +174,7 @@ class Ticket:
 
     @staticmethod
     def create(db: Session, ticket: schemas.TicketCreate, db_flight: models.Flight, hard: bool = False,
-               soft: bool = False):
+               soft: bool = False, user_id: int = ...):
         """ get from flight agent and him discount calculate price and create ticket than create agent debt history"""
         if hard or soft:
             query = db.query(models.Agent, models.Discount, models.Booking). \
@@ -197,18 +197,19 @@ class Ticket:
         else:
             agent, discount = query["Agent"], query["Discount"]
         if agent is None:
-            return {'message': 'Agent not found'}
-
+            return {'error': 'Agent not found'}
+        print('agent', agent)
         if discount.amount is not None:
             price = db_flight.price - discount.amount
         else:
             price = db_flight.price
+        print('query')
 
         price += ticket.luggage
 
         if not agent.is_on_credit:
             if agent.balance - price < 0:
-                return {'message': 'Agent has not enough on balance'}
+                return {'error': 'Agent has not enough on balance'}
             else:
                 agent.balance -= price
         else:
@@ -218,21 +219,23 @@ class Ticket:
             if hard:
                 qouta = booking.hard_block - 1
                 if qouta < 0:
-                    return {'message': 'Agent has not enough hard block'}
+                    return {'error': 'Agent has not enough hard block'}
                 booking.hard_block -= 1
             if soft:
                 qouta = booking.soft_block - 1
                 if qouta < 0:
-                    return {'message': 'Agent has not enough soft block'}
+                    return {'error': 'Agent has not enough soft block'}
                 booking.soft_block -= 1
         else:
             if db_flight.left_seats - 1 < 0:
-                return {'message': 'Flight has not enough seats'}
+                return {'error': 'Flight has not enough seats'}
             db_flight.left_seats -= 1
+        print('query')
 
         db_ticket = models.Ticket(**ticket.dict())
         db_ticket.price = price
         db_ticket.ticket_number = "WZ " + str(random.randint(10000000, 99999999))
+        db_ticket.actor_id = user_id
         db.add(db_ticket)
         db.commit()
         db.refresh(db_ticket)
@@ -242,7 +245,7 @@ class Ticket:
         db.add(db_agent_debt)
         db.commit()
         db.refresh(db_agent_debt)
-
+        print('query')
         return {"message": "Ticket created successfully"}
 
     @staticmethod
@@ -357,7 +360,7 @@ class Booking:
         diff = booking.hard_block + booking.soft_block - patch.hard_block - patch.soft_block
         flight.left_seats += diff
         if flight.left_seats < 0:
-            return {'message': 'Flight has not enough seats'}
+            return {'error': 'Flight has not enough seats'}
 
         for key, value in patch.dict().items():
             if value is not None:
@@ -419,9 +422,10 @@ class Flight:
             models.Flight.departure_date >= datetime.now()).first()
 
     @staticmethod
-    def create(db: Session, flight: schemas.FlightCreate):
+    def create(db: Session, flight: schemas.FlightCreate, user_id: int):
         db_flight = models.Flight(**flight.dict())
         db_flight.left_seats = flight.total_seats
+        db_flight.actor_id = user_id
         db.add(db_flight)
         db.commit()
         db.refresh(db_flight)

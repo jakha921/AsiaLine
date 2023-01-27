@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time
 
 from db.models import CurrencyCode, Language, Platform
 
@@ -164,7 +164,6 @@ class FlightCreate(BaseModel):
     currency: CurrencyCode
     total_seats: int
     on_sale: datetime
-    actor_id: int
 
     # region Validators
     @validator('currency')
@@ -185,12 +184,6 @@ class FlightCreate(BaseModel):
             raise ValueError('to_airport_id must be greater than 0')
         return v
 
-    @validator('actor_id')
-    def actor_id_must_be_greater_than_0(cls, v):
-        if v < 1:
-            raise ValueError('actor_id must be greater than 0')
-        return v
-
     @validator('departure_date')
     def departure_date_must_be_greater_than_now(cls, v):
         if v < datetime.now():
@@ -202,7 +195,6 @@ class FlightCreate(BaseModel):
         if v < values.get('departure_date'):
             raise ValueError('arrival_date must be greater than departure_date')
         return v
-
 
     @validator('price')
     def price_must_be_greater_than_0(cls, v):
@@ -224,13 +216,12 @@ class FlightCreate(BaseModel):
                 "flight_number": "WZ 1234",
                 "from_airport_id": 1,
                 "to_airport_id": 2,
-                "departure_date": (datetime.now() + timedelta(hours=12)).strftime("%Y-%m-%d %H:%M"),
-                "arrival_date": (datetime.now() + timedelta(hours=18)).strftime("%Y-%m-%d %H:%M"),
-                "price": 10000,
+                "departure_date": (datetime.now() + timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"),
+                "arrival_date": (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+                "price": 1500,
                 "currency": "RUB",
-                "total_seats": 100,
+                "total_seats": 30,
                 "on_sale": (datetime.now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M"),
-                "actor_id": 1
             }
         }
 
@@ -478,7 +469,6 @@ class TicketCreate(BaseModel):
     agent_id: int
     comment: Optional[str]
     luggage: int
-    actor_id: int
     status_id: int = 1
     platform: Platform = Platform.WEB
 
@@ -560,7 +550,6 @@ class TicketCreate(BaseModel):
                 "agent_id": 1,
                 "comment": "Not required (type: str)",
                 "luggage": 500,
-                "actor_id": 1,
             }
         }
 

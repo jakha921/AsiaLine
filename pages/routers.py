@@ -1,9 +1,11 @@
-from fastapi import Depends, APIRouter
+from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime, date, timedelta
 import logging
 
+from auth.auth.auth_bearer import JWTBearer
+from auth.auth.auth_handler import check_permissions
 from db.database import get_db
 from pages import api, sort
 
@@ -17,33 +19,68 @@ async def get_currency_rate(db: Session = Depends(get_db)):
         return api.get_currency_last_item(db)
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/main/flights/dates")
 async def get_dates_and_count_flights(db: Session = Depends(get_db),
                                       from_date: Optional[date] = datetime.now().date(),
-                                      to_date: Optional[date] = datetime.now().date()):
+                                      to_date: Optional[date] = datetime.now().date(),
+                                      jwt: dict = Depends(JWTBearer())):
     """ Get dates and count flights for each date """
+    if not check_permissions('main_page', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         dates_range = api.get_flights_by_range_departure_date(db, from_date, to_date)
-        return sort.sort_by_date_flights(dates_range)
+        if dates_range:
+            return sort.sort_by_date_flights(dates_range)
+        return []
     except Exception as e:
         print(logging.error(e))
 
 
-@routers.get("/main/flights/range")
-async def get_static_flight_range(db: Session = Depends(get_db),
-                                  from_date: Optional[date] = datetime.now().date(),
-                                  date_to: Optional[date] = datetime.now().date()):
-    """ get flights by range departure date and last currency rate """
+@routers.get("/main/flights")
+async def get_flights_and_search(db: Session = Depends(get_db),
+                                 searching_text: Optional[str] = None,
+                                 from_date: Optional[date] = datetime.now().date(),
+                                 to_date: Optional[date] = datetime.now().date(),
+                                 page: int = 1,
+                                 limit: int = 10,
+                                 jwt: dict = Depends(JWTBearer())):
+    """ Get flights where departure date is between from_date and to_date and search by text """
+    if not check_permissions('flights_main', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    db_flights = api.get_flights_by_range_departure_date(db, from_date, to_date, page, limit, searching_text)
+    # sorted_flights = sort.sort_flights(db, db_flights)
+    currency_rate = api.get_currency_last_item(db)
+
+    result = {
+        'currency': sort.sort_currency_rate(currency_rate),
+        'flights_count': len(db_flights),
+        'flights': db_flights
+    }
+    return result
+
+
+@routers.get("/flights/main")
+async def get_flights_and_search(db: Session = Depends(get_db),
+                                 searching_text: Optional[str] = None,
+                                 from_date: Optional[date] = datetime.now().date(),
+                                 to_date: Optional[date] = datetime.now().date(),
+                                 page: Optional[int] = 1,
+                                 limit: Optional[int] = 10,
+                                 jwt: dict = Depends(JWTBearer())):
+    """ Get flights and search by text """
+    if not check_permissions('main_page', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_currency_rate = api.get_currency_last_item(db)
-    db_flights = api.get_flights_by_range_departure_date(db, from_date, date_to)
+    db_flights = api.get_flights_by_range_departure_date(db, from_date, to_date, page, limit, searching_text)
 
     db_pass = api.get_reg_passenger_for_last_30_days(db)
     db_sold_tickets = api.get_sold_tickets_for_last_30_days(db)
 
     sorted_cur = sort.sort_currency_rate(db_currency_rate)
-    sorted_flights = sort.sort_flights(db, db_flights)
+    # sorted_flights = sort.sort_flights(db, db_flights)
 
     result = {
         "currency": sorted_cur,
@@ -52,34 +89,23 @@ async def get_static_flight_range(db: Session = Depends(get_db),
             "sold_tickets": len(db_sold_tickets),
             "revenue": sum(ticket.price for ticket in db_sold_tickets),
         },
-        "flights_count": len(sorted_flights),
-        "flights": sorted_flights
-    }
-    return result
-
-
-@routers.get("/flights/main")
-async def get_flights(db: Session = Depends(get_db),
-                      from_date: Optional[date] = datetime.now().date(),
-                      to_date: Optional[date] = datetime.now().date()):
-    """ Get all flights where departure date >= now and on sale <= now """
-    db_flights = api.get_flights_by_range_departure_date(db, from_date, to_date)
-    sorted_flights = sort.sort_flights(db, db_flights)
-    currency_rate = api.get_currency_last_item(db)
-
-    result = {
-        'currency': sort.sort_currency_rate(currency_rate),
-        'flights_count': len(db_flights),
-        'flights': sorted_flights
+        "flights_count": len(db_flights),
+        "flights": db_flights
     }
     return result
 
 
 @routers.get("/flights/tickets")
 async def get_tickets_by_flight_id(db: Session = Depends(get_db),
-                                   flight_id: int = ...):
+                                   from_date: Optional[date] = datetime.now().date(),
+                                   to_date: Optional[date] = datetime.now().date(),
+                                   flight_id: int = ...,
+                                   page: Optional[int] = 1,
+                                   limit: Optional[int] = 10):
     """ Get all tickets for given flight id """
-    db_tickets = api.get_tickets_by_flight_id(db, flight_id)
+    db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date=from_date, to_date=to_date,
+                                                               flight_id=flight_id, page=page, limit=limit)
+
     db_currency_rate = api.get_currency_last_item(db)
 
     sorted_cur = sort.sort_currency_rate(db_currency_rate)
@@ -93,81 +119,117 @@ async def get_tickets_by_flight_id(db: Session = Depends(get_db),
 
 
 @routers.get("/flights/queue")
-async def get_queue_fligths(db: Session = Depends(get_db),
-                            from_date: Optional[date] = datetime.now().date(),
-                            to_date: Optional[date] = datetime.now().date()):
+async def get_queue_fligths_and_search(db: Session = Depends(get_db),
+                                       searching_text: Optional[str] = None,
+                                       from_date: Optional[date] = datetime.now().date(),
+                                       to_date: Optional[date] = datetime.now().date(),
+                                       page: int = 1,
+                                       limit: int = 10,
+                                       jwt: dict = Depends(JWTBearer())):
     """ Get all flights where on sale date >= now """
-    db_flights = api.get_flights_by_on_sale_date(db, from_date, to_date)
-    sorted_flights = sort.sort_flights(db, db_flights)
+    if not check_permissions('flights_queue', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    db_flights = api.get_flights_by_on_sale_date_and_search(db, from_date, to_date, page, limit, searching_text)
+    # sorted_flights = sort.sort_flights(db, db_flights)
 
     currency_rate = api.get_currency_last_item(db)
 
     result = {
         'currency': sort.sort_currency_rate(currency_rate),
-        'flights_count': len(sorted_flights),
-        'queue_flights': sorted_flights
+        'flights_count': len(db_flights),
+        'queue_flights': db_flights
     }
     return result
 
 
 @routers.get("/flights/quotas")
 async def get_flight_quotas(db: Session = Depends(get_db),
+                            searching_text: Optional[str] = None,
                             from_date: Optional[date] = datetime.now().date(),
-                            to_date: Optional[date] = datetime.now().date()):
+                            to_date: Optional[date] = datetime.now().date(),
+                            page: int = 1,
+                            limit: int = 10,
+                            jwt: dict = Depends(JWTBearer())):
     """ get all flight quotes """
-    db_flights = api.get_quotas_by_flight_id(db, from_date, to_date)
-    sorted_quotas = sort.sort_flight_quotas(db_flights)
+    if not check_permissions('flights_quotas', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    db_flights = api.get_quotas_by_flight_id(db, from_date, to_date, page, limit, searching_text)
+    # sorted_quotas = sort.sort_flight_quotas(db_flights)
 
-    return sorted_quotas
+    return db_flights
 
 
 @routers.get("/tickets/main")
 async def get_tickets(db: Session = Depends(get_db),
+                      searching_text: Optional[str] = None,
                       from_date: Optional[date] = datetime.now().date(),
                       to_date: Optional[date] = datetime.now().date(),
-                      agent_id: Optional[int] = None):
+                      agent_id: Optional[int] = None,
+                      page: int = 1,
+                      limit: int = 10,
+                      jwt: dict = Depends(JWTBearer())):
     """ Get tickets by flights where departure date is not past now """
+    if not check_permissions('tickets_page', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date, to_date, agent_id)
-        sorted_tickets = sort.sort_tickets(db_tickets)
+        db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date=from_date, to_date=to_date, page=page,
+                                                                   limit=limit, search_text=searching_text,
+                                                                   agent_id=agent_id)
+        # sorted_tickets = sort.sort_tickets(db_tickets)
         currency_rate = api.get_currency_last_item(db)
 
         result = {
             'currency': sort.sort_currency_rate(currency_rate),
-            'tickets_count': len(sorted_tickets),
-            'tickets': sorted_tickets
+            'tickets_count': len(db_tickets),
+            'tickets': db_tickets
         }
         return result
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/users/main")
-async def get_users(db: Session = Depends(get_db)):
+async def get_users(db: Session = Depends(get_db),
+                    page: int = 1,
+                    limit: int = 10,
+                    searching_text: Optional[str] = None,
+                    jwt: dict = Depends(JWTBearer())):
     """ get all users with then roles """
+    if not check_permissions('users_main', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_users = api.get_all_users_with_role(db)
-        sorted_users = sort.sort_users(db_users)
+        db_users = api.get_all_users_with_role(db, page, limit, searching_text)
+        # sorted_users = sort.sort_users(db_users)
 
         return {
-            'users_count': len(sorted_users),
-            'users': sorted_users
+            'users_count': len(db_users),
+            'users': db_users
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/users/roles")
-async def get_roles(db: Session = Depends(get_db)):
+async def get_roles(db: Session = Depends(get_db),
+                    page: int = 1,
+                    limit: int = 10,
+                    searching_text: Optional[str] = None,
+                    jwt: dict = Depends(JWTBearer())):
     """ get all roles that can be assigned to users """
+    if not check_permissions('users_roles', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_roles = api.get_all_roles(db)
+        db_roles = api.get_all_roles(db, page=page, limit=limit, search_text=searching_text)
         return {
-            'count_roles': len(db_roles),
+            # 'count_roles': len(db_roles),
             'roles': db_roles
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # payment
@@ -175,45 +237,61 @@ async def get_roles(db: Session = Depends(get_db)):
 async def get_tickets(db: Session = Depends(get_db),
                       from_date: Optional[date] = datetime.now().date() - timedelta(days=7),
                       to_date: Optional[date] = datetime.now().date(),
-                      agent_id: Optional[int] = None):
+                      agent_id: Optional[int] = None,
+                      page: int = 1,
+                      limit: int = 10,
+                      searching_text: Optional[str] = None,
+                      jwt: dict = Depends(JWTBearer())):
     """ get all payments who paid amount of agents for fill the balance """
+    if not check_permissions('payments_main', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_payments = api.get_tickets_by_agent_id(db, from_date, to_date, agent_id)
-        sorted_payments = sort.sorted_payments(db_payments)
+        db_payments = api.get_tickets_by_agent_id(db, from_date, to_date, agent_id, page, limit, searching_text)
+        # sorted_payments = sort.sorted_payments(db_payments)
         return {
-            'payments_count': len(sorted_payments),
-            'payments': sorted_payments
+            'payments_count': len(db_payments),
+            'payments': db_payments
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/payments/agents/balance")
 async def get_agent_balances(db: Session = Depends(get_db),
-                             agent_id: Optional[int] = None):
+                             agent_id: Optional[int] = None,
+                             jwt: dict = Depends(JWTBearer())):
     """ Get all agent balances or by agent id """
+    if not check_permissions('payments_agents_balance', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return api.get_agents_balance(db, agent_id)
 
 
 # agents
 @routers.get("/agents/main")
-async def get_agents(db: Session = Depends(get_db), agent_id: Optional[int] = None):
+async def get_agents(db: Session = Depends(get_db), agent_id: Optional[int] = None, jwt: dict = Depends(JWTBearer())):
     """ Get all agents and their discounts """
+    if not check_permissions('agents_main', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_agents = api.get_agents_discounts(db, agent_id)
         sorted_agents = sort.sorted_agents(db_agents)
         return sorted_agents
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/agents/discounts")
-async def get_discounts(db: Session = Depends(get_db)):
+async def get_discounts(db: Session = Depends(get_db), jwt: dict = Depends(JWTBearer())):
     """ get all discounts that can be assigned to agents """
+    if not check_permissions('agents_discounts', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         return api.get_discounts(db)
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # airports
@@ -228,6 +306,7 @@ async def get_airports(db: Session = Depends(get_db)):
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # city
@@ -242,6 +321,7 @@ async def get_cities(db: Session = Depends(get_db)):
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # countries
@@ -256,6 +336,7 @@ async def get_countries(db: Session = Depends(get_db)):
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 # ticket classes
@@ -270,3 +351,4 @@ async def get_ticket_classes(db: Session = Depends(get_db)):
         }
     except Exception as e:
         print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")

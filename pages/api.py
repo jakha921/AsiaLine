@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from sqlalchemy import func, case
+from sqlalchemy import func, case, text
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import traceback
@@ -47,17 +47,51 @@ def get_currency_last_item(db: Session):
 
 
 # Statics
-def get_flights_by_range_departure_date(db: Session, from_date, to_date):
+def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=None, limit=None, search_text=None):
     """ Get flights where now <= departure_date <= now """
     from_date, to_date = add_time(from_date, to_date)
-    return db.query(models.Flight
-                    ).filter(
-                        models.Flight.deleted_at == None,
-                        models.Flight.departure_date >= from_date,
-                        models.Flight.departure_date <= to_date,
-                        models.Flight.on_sale <= from_date
-                    ).order_by(models.Flight.departure_date,
-                               models.Flight.on_sale).all()
+
+    query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
+                    json_build_object( \
+                        'id', a1.id, \
+                        'airport_ru', a1.airport_ru, \
+                        'airport_en', a1.airport_en, \
+                        'airport_uz', a1.airport_uz \
+                        ) AS from_airport, \
+                    json_build_object( \
+                        'id', a2.id, \
+                        'airport_ru', a2.airport_ru, \
+                        'airport_en', a2.airport_en, \
+                        'airport_uz', a2.airport_uz \
+                    ) AS to_airport, \
+                    f.total_seats, f.left_seats \
+                FROM flights AS f \
+                JOIN airports AS a1 ON f.from_airport_id = a1.id \
+                JOIN airports AS a2 ON f.to_airport_id = a2.id \
+                WHERE f.deleted_at IS NULL \
+                AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+                AND f.on_sale <= '{from_date}' "
+
+    if search_text and not search_text.isdigit():
+        query += f"AND (f.flight_number LIKE '%{search_text}%' \
+                OR a1.airport_ru LIKE '%{search_text}%' \
+                OR a1.airport_en LIKE '%{search_text}%' \
+                OR a1.airport_uz LIKE '%{search_text}%' \
+                OR a2.airport_ru LIKE '%{search_text}%' \
+                OR a2.airport_en LIKE '%{search_text}%' \
+                OR a2.airport_uz LIKE '%{search_text}%') "
+
+    if search_text is not None and search_text.isdigit():
+        # search_text = int(search_text)
+        # print(type(search_text))
+        query += f"AND (f.price LIKE '%{search_text}%' \
+                   OR f.left_seats LIKE '%{search_text}%' \
+                   OR f.total_seats LIKE '%{search_text}%') "
+    if page is not None and limit is not None:
+        query += f"ORDER BY f.departure_date \
+                LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+    return db.execute(query).fetchall()
 
 
 def get_reg_passenger_for_last_30_days(db: Session):
@@ -95,127 +129,235 @@ def get_tickets_by_flight_id(db: Session, flight_id):
         print(logging.error(e))
 
 
-def get_flights_by_on_sale_date(db: Session, from_date, to_date):
+def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page, limit, search_text=None):
     """ get flights by on_sale is >= now """
     from_date, to_date = add_time(from_date, to_date)
-    return db.query(
-        models.Flight
-    ).filter(
-        models.Flight.deleted_at == None,
-        models.Flight.on_sale >= from_date,
-        models.Flight.departure_date >= from_date,
-        models.Flight.departure_date <= to_date,
-    ).order_by(models.Flight.on_sale).all()
+
+    query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
+                    json_build_object( \
+                        'id', a1.id, \
+                        'airport_ru', a1.airport_ru, \
+                        'airport_en', a1.airport_en, \
+                        'airport_uz', a1.airport_uz \
+                        ) AS from_airport, \
+                    json_build_object( \
+                        'id', a2.id, \
+                        'airport_ru', a2.airport_ru, \
+                        'airport_en', a2.airport_en, \
+                        'airport_uz', a2.airport_uz \
+                    ) AS to_airport, \
+                    f.on_sale, f.total_seats, f.left_seats \
+                FROM flights AS f \
+                JOIN airports AS a1 ON f.from_airport_id = a1.id \
+                JOIN airports AS a2 ON f.to_airport_id = a2.id \
+                WHERE f.deleted_at IS NULL \
+                AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+                AND f.on_sale >= '{from_date}'" \
+
+    if search_text is not None:
+        query += f"AND (f.flight_number LIKE '%{search_text}%' \
+                   OR a1.airport_ru LIKE '%{search_text}%' \
+                   OR a1.airport_en LIKE '%{search_text}%' \
+                   OR a1.airport_uz LIKE '%{search_text}%' \
+                   OR a2.airport_ru LIKE '%{search_text}%' \
+                   OR a2.airport_en LIKE '%{search_text}%' \
+                   OR a2.airport_uz LIKE '%{search_text}%') "
+        # OR f.price LIKE '%{search_text}%' \
+        # OR f.left_seats LIKE '%{search_text}%' \
+
+    query += f"ORDER BY f.departure_date \
+                LIMIT {limit} OFFSET {limit * (page - 1)}"
+    return db.execute(text(query)).fetchall()
 
 
-def get_quotas_by_flight_id(db, from_date, to_date):
+def get_quotas_by_flight_id(db, from_date, to_date, page, limit, search_text=None):
     """ Get booking by flight_id """
     try:
         from_date, to_date = add_time(from_date, to_date)
 
-    #     get models Flight, Agent and Booking
-        return db.query(
-            models.Flight,
-            models.Agent,
-            models.Booking,
-        ).filter(
-            models.Flight.deleted_at == None,
-            models.Flight.departure_date >= from_date,
-            models.Flight.departure_date <= to_date,
-            models.Flight.on_sale <= from_date,
-            models.Flight.id == models.Booking.flight_id,
-            models.Booking.deleted_at == None,
-            models.Agent.id == models.Booking.agent_id,
-        ).order_by(models.Flight.departure_date,
-                     models.Flight.on_sale).all()
+        query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, f.left_seats, \
+                    u.username, b.hard_block, b.soft_block \
+                    FROM flights AS f \
+                    JOIN bookings AS b ON f.id = b.flight_id \
+                    JOIN agents AS a ON b.agent_id = a.id \
+                    JOIN users AS u ON a.user_id = u.id \
+                    WHERE f.deleted_at IS NULL \
+                    AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+                    AND f.on_sale <= '{from_date}'"
+
+        if search_text is not None:
+            query += f"AND (f.flight_number LIKE '%{search_text}%' \
+                       OR u.username LIKE '%{search_text}%') "
+
+        query += f"ORDER BY f.departure_date \
+                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date, agent_id):
+def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date, page, limit,
+                                              agent_id: int = None, flight_id: int = None, search_text=None):
     """ get tickets by departure_date is >= now and on_sale <= now """
-    try:
-        from_date, to_date = add_time(from_date, to_date)
-        if agent_id:
-            return db.query(
-                models.Flight, models.Ticket, models.TicketStatus
-            ).filter(
-                models.Flight.deleted_at == None,
-                models.Flight.departure_date >= from_date,
-                models.Flight.departure_date <= to_date,
-                models.Flight.on_sale <= from_date,
-                models.Ticket.flight_id == models.Flight.id,
-                models.Ticket.deleted_at == None,
-                models.Ticket.agent_id == agent_id,
-                models.TicketStatus.id == models.Ticket.status_id
+    # try:
+    from_date, to_date = add_time(from_date, to_date)
 
-            ).order_by(models.Flight.departure_date, models.Ticket.created_at).all()
+    query = f"SELECT t.id, t.created_at, t.ticket_number, \
+                    json_build_object( \
+                        'id', f.id, \
+                        'flight_number', f.flight_number, \
+                        'departure_date', f.departure_date, \
+                        'price', f.price, \
+                        'currency', f.currency \
+                    ) AS flight, \
+                    CONCAT(t.first_name, t.surname) AS passenger, \
+                    u.username AS agent, \
+                    t.comment  \
+                FROM tickets AS t \
+                JOIN flights AS f ON t.flight_id = f.id \
+                JOIN agents AS a ON t.agent_id = a.id \
+                JOIN users AS u ON a.user_id = u.id \
+                WHERE f.deleted_at IS NULL \
+                AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+                AND f.on_sale <= '{from_date}'"
 
-        return  db.query(
-            models.Flight, models.Ticket, models.TicketStatus
-        ).filter(
-            models.Flight.deleted_at == None,
-            models.Flight.departure_date >= from_date,
-            models.Flight.departure_date <= to_date,
-            models.Flight.on_sale <= from_date,
-            models.Ticket.flight_id == models.Flight.id,
-            models.Ticket.deleted_at == None,
-            models.TicketStatus.id == models.Ticket.status_id
+    if agent_id:
+        query += f"AND t.agent_id = {agent_id} "
 
-        ).order_by(models.Flight.departure_date, models.Ticket.created_at).all()
-    except Exception as e:
-        print(logging.error(traceback.format_exc()))
-        print(logging.error(e))
+    if flight_id:
+        query += f"AND t.flight_id = {flight_id} "
+
+    if search_text is not None:
+        query += f"AND (f.flight_number LIKE '%{search_text}%' \
+                   OR u.username LIKE '%{search_text}%' \
+                   OR t.ticket_number LIKE '%{search_text}%' \
+                   OR t.first_name LIKE '%{search_text}%' \
+                   OR t.surname LIKE '%{search_text}%' ) "
+
+    if limit is not None and page is not None:
+        query += f"ORDER BY f.departure_date, t.created_at \
+                LIMIT {limit} OFFSET {limit * (page - 1)}"
+    return db.execute(text(query)).fetchall()
+
+    # except Exception as e:
+    #     print(logging.error(traceback.format_exc()))
+    #     print(logging.error(e))
 
 
-def get_all_users_with_role(db: Session):
+def get_all_users_with_role(db: Session, page: int, limit: int, search_text=None):
     """ get all passengers with role """
     try:
-        return db.query(
-            models.User, models.Role
-        ).filter(
-            models.User.role_id == models.Role.id).order_by(models.User.date_joined).all()
+        query = f"SELECT u.id, u.username, u.email, \
+                    json_build_object( \
+                        'id', r.id, \
+                        'title_ru', r.title_ru, \
+                        'title_en', r.title_en, \
+                        'title_uz', r.title_uz \
+                    ) AS role \
+                FROM users AS u \
+                JOIN roles AS r ON u.role_id = r.id \
+                WHERE u.deleted_at IS NULL "
+
+        if search_text is not None:
+            query += f"AND (u.username LIKE '%{search_text}%' \
+                          OR u.email LIKE '%{search_text}%' \
+                            OR r.title_ru LIKE '%{search_text}%' \
+                            OR r.title_en LIKE '%{search_text}%' \
+                            OR r.title_uz LIKE '%{search_text}%') "
+
+        if limit is not None and page is not None:
+            query += f"ORDER BY u.id \
+                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_all_roles(db: Session):
+def get_all_roles(db: Session, page: int, limit: int, search_text=None):
     """ get all roles """
     try:
-        return db.query(models.Role).all()
+        query = f"SELECT r.id, r.title_ru, r.title_en, r.title_uz \
+                FROM roles AS r "
+                # LEFT JOIN role_permissions AS rp ON r.id = rp.role_id \
+                # LEFT JOIN permissions AS p ON rp.permission_id = p.id \
+                # LEFT JOIN sections AS s ON p.section_id = s.id "
+
+        if search_text is not None:
+            query += f"WHERE r.title_ru LIKE '%{search_text}%' \
+                            OR r.title_en LIKE '%{search_text}%' \
+                            OR r.title_uz LIKE '%{search_text}%' "
+
+        if limit is not None and page is not None:
+            query += f"ORDER BY r.id \
+                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
 # get tickets by agent_id
-def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id):
+def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=None, limit=None, search_text=None):
     """ get tickets by departure_date is >= now and on_sale <= now """
     try:
         from_date, to_date = add_time(from_date, to_date)
-        if agent_id:
-            return db.query(
-                models.Refill, models.Agent, models.User
-            ).filter(
-                models.Refill.deleted_at == None,
-                models.Refill.created_at >= from_date,
-                models.Refill.created_at <= to_date,
-                models.Refill.agent_id == agent_id,
-                models.Agent.id == models.Refill.agent_id,
-                models.User.id == models.Refill.receiver_id
-            ).order_by(models.Refill.created_at).all()
+        # if agent_id:
+        #     return db.query(
+        #         models.Refill, models.Agent, models.User
+        #     ).filter(
+        #         models.Refill.deleted_at == None,
+        #         models.Refill.created_at >= from_date,
+        #         models.Refill.created_at <= to_date,
+        #         models.Refill.agent_id == agent_id,
+        #         models.Agent.id == models.Refill.agent_id,
+        #         models.User.id == models.Refill.receiver_id
+        #     ).order_by(models.Refill.created_at).all()
+        #
+        # return db.query(
+        #     models.Refill, models.Agent, models.User
+        # ).filter(
+        #     models.Refill.deleted_at == None,
+        #     models.Refill.created_at >= from_date,
+        #     models.Refill.created_at <= to_date,
+        #     models.Agent.id == models.Refill.agent_id,
+        #     models.User.id == models.Refill.receiver_id,
+        # ).order_by(models.Refill.created_at.desc()).all()
+        query = f"SELECT r.id, r.created_at, r.amount, r.comment, \
+                    json_build_object( \
+                        'id', a.id, \
+                        'username', a.company_name \
+                    ) AS agent, \
+                    json_build_object( \
+                        'id', u.id, \
+                        'username', u.username \
+                    ) AS receiver \
+                FROM refills AS r \
+                JOIN agents AS a ON r.agent_id = a.id \
+                JOIN users AS u ON r.receiver_id = u.id \
+                WHERE r.deleted_at IS NULL "
 
-        return db.query(
-            models.Refill, models.Agent, models.User
-        ).filter(
-            models.Refill.deleted_at == None,
-            models.Refill.created_at >= from_date,
-            models.Refill.created_at <= to_date,
-            models.Agent.id == models.Refill.agent_id,
-            models.User.id == models.Refill.receiver_id,
-        ).order_by(models.Refill.created_at.desc()).all()
+        if from_date and to_date:
+            query += f"AND r.created_at BETWEEN '{from_date}' AND '{to_date}' "
+
+        if agent_id:
+            query += f"AND r.agent_id = {agent_id} "
+
+        if search_text is not None:
+            query += f"AND (r.amount LIKE '%{search_text}%' \
+                            OR r.comment LIKE '%{search_text}%' \
+                            OR u.username LIKE '%{search_text}%' \
+                            OR a.company_name LIKE '%{search_text}%') "
+
+        if limit is not None and page is not None:
+            query += f"ORDER BY r.created_at \
+                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
