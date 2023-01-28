@@ -49,7 +49,8 @@ def get_currency_last_item(db: Session):
 # Statics
 def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=None, limit=None, search_text=None):
     """ Get flights where now <= departure_date <= now """
-    from_date, to_date = add_time(from_date, to_date)
+    if from_date is  not None and to_date is not None:
+        from_date, to_date = add_time(from_date, to_date)
 
     query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
                     json_build_object( \
@@ -68,9 +69,14 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                 FROM flights AS f \
                 JOIN airports AS a1 ON f.from_airport_id = a1.id \
                 JOIN airports AS a2 ON f.to_airport_id = a2.id \
-                WHERE f.deleted_at IS NULL \
-                AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
-                AND f.on_sale <= '{from_date}' "
+                WHERE f.deleted_at IS NULL "
+
+    if from_date and to_date:
+        query += f"AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+               AND f.on_sale <= '{from_date}' "
+    else:
+        query += f"AND f.departure_date >= '{datetime.now()}' \
+               AND f.on_sale <= '{datetime.now()}' "
 
     if search_text and not search_text.isdigit():
         query += f"AND (f.flight_number LIKE '%{search_text}%' \

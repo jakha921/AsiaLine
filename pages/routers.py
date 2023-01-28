@@ -42,10 +42,10 @@ async def get_dates_and_count_flights(db: Session = Depends(get_db),
 @routers.get("/main/flights")
 async def get_flights_and_search(db: Session = Depends(get_db),
                                  searching_text: Optional[str] = None,
-                                 from_date: Optional[date] = datetime.now().date(),
-                                 to_date: Optional[date] = datetime.now().date(),
-                                 page: int = 1,
-                                 limit: int = 10,
+                                 from_date: Optional[date] = None,
+                                 to_date: Optional[date] = None,
+                                 page: int = None,
+                                 limit: int = None,
                                  jwt: dict = Depends(JWTBearer())):
     """ Get flights where departure date is between from_date and to_date and search by text """
     if not check_permissions('flights_main', jwt):
@@ -65,10 +65,10 @@ async def get_flights_and_search(db: Session = Depends(get_db),
 @routers.get("/flights/main")
 async def get_flights_and_search(db: Session = Depends(get_db),
                                  searching_text: Optional[str] = None,
-                                 from_date: Optional[date] = datetime.now().date(),
-                                 to_date: Optional[date] = datetime.now().date(),
-                                 page: Optional[int] = 1,
-                                 limit: Optional[int] = 10,
+                                 from_date: Optional[date] = None,
+                                 to_date: Optional[date] = None,
+                                 page: Optional[int] = None,
+                                 limit: Optional[int] = None,
                                  jwt: dict = Depends(JWTBearer())):
     """ Get flights and search by text """
     if not check_permissions('main_page', jwt):
@@ -121,10 +121,10 @@ async def get_tickets_by_flight_id(db: Session = Depends(get_db),
 @routers.get("/flights/queue")
 async def get_queue_fligths_and_search(db: Session = Depends(get_db),
                                        searching_text: Optional[str] = None,
-                                       from_date: Optional[date] = datetime.now().date(),
-                                       to_date: Optional[date] = datetime.now().date(),
-                                       page: int = 1,
-                                       limit: int = 10,
+                                       from_date: date = ...,
+                                       to_date: date = ...,
+                                       page: int = ...,
+                                       limit: int = ...,
                                        jwt: dict = Depends(JWTBearer())):
     """ Get all flights where on sale date >= now """
     if not check_permissions('flights_queue', jwt):
