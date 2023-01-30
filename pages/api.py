@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from sqlalchemy import func, case, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import traceback
@@ -46,10 +46,10 @@ def get_currency_last_item(db: Session):
     return db_currency_rate
 
 
-# Statics
-def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=None, limit=None, search_text=None):
+def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=None, limit=None, search_text=None,
+                                        book: bool = False):
     """ Get flights where now <= departure_date <= now """
-    if from_date is  not None and to_date is not None:
+    if from_date is not None and to_date is not None:
         from_date, to_date = add_time(from_date, to_date)
 
     query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
@@ -65,11 +65,19 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                         'airport_en', a2.airport_en, \
                         'airport_uz', a2.airport_uz \
                     ) AS to_airport, \
-                    f.total_seats, f.left_seats \
-                FROM flights AS f \
+                    f.total_seats, f.left_seats "
+
+    if book:
+        query += ", (SUM(b.hard_block) + SUM(b.soft_block)) AS booked_seats "
+
+    query += f"FROM flights AS f \
                 JOIN airports AS a1 ON f.from_airport_id = a1.id \
-                JOIN airports AS a2 ON f.to_airport_id = a2.id \
-                WHERE f.deleted_at IS NULL "
+                JOIN airports AS a2 ON f.to_airport_id = a2.id "
+
+    if book:
+        query += f"LEFT JOIN bookings AS b ON f.id = b.flight_id "
+
+    query += f"WHERE f.deleted_at IS NULL "
 
     if from_date and to_date:
         query += f"AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
@@ -87,19 +95,23 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                 OR a2.airport_en LIKE '%{search_text}%' \
                 OR a2.airport_uz LIKE '%{search_text}%') "
 
-    if search_text is not None and search_text.isdigit():
-        # search_text = int(search_text)
-        # print(type(search_text))
-        query += f"AND (f.price LIKE '%{search_text}%' \
-                   OR f.left_seats LIKE '%{search_text}%' \
-                   OR f.total_seats LIKE '%{search_text}%') "
+    if search_text and search_text.isdigit():
+        query += f"AND (f.price={search_text} \
+                OR f.total_seats={search_text} \
+                OR f.left_seats={search_text} \
+                OR booked_seats={search_text}) "
+
+    if book:
+        query += f"GROUP BY f.id, a1.id, a2.id "
+
+    query += f"ORDER BY f.departure_date "
     if page is not None and limit is not None:
-        query += f"ORDER BY f.departure_date \
-                LIMIT {limit} OFFSET {limit * (page - 1)}"
+        query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
     return db.execute(query).fetchall()
 
 
+# region Statics
 def get_reg_passenger_for_last_30_days(db: Session):
     """ Get registered passenger for last 30 days """
     return db.query(models.Passenger).filter(models.Passenger.created_at >= datetime.now() - timedelta(days=30)).count()
@@ -118,68 +130,71 @@ def get_sold_tickets_for_last_30_days(db: Session):
         print(logging.error(e))
 
 
-def get_tickets_by_flight_id(db: Session, flight_id):
-    """ Get all tickets by flight_id """
+def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page, limit, search_text=None):
+    """ get flights by on_sale is >= now """
     try:
-        return db.query(
-            models.Ticket
-        ).filter(
-            models.Ticket.deleted_at == None,
-            models.Ticket.flight_id == flight_id,
-            models.Flight.id == models.Ticket.flight_id,
-            models.Flight.deleted_at == None,
-            models.Flight.departure_date >= datetime.now()
-        ).order_by(models.Ticket.created_at, models.Flight.departure_date).all()
+        if from_date is not None and to_date is not None:
+            from_date, to_date = add_time(from_date, to_date)
+
+        query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
+                        json_build_object( \
+                            'id', a1.id, \
+                            'airport_ru', a1.airport_ru, \
+                            'airport_en', a1.airport_en, \
+                            'airport_uz', a1.airport_uz \
+                            ) AS from_airport, \
+                        json_build_object( \
+                            'id', a2.id, \
+                            'airport_ru', a2.airport_ru, \
+                            'airport_en', a2.airport_en, \
+                            'airport_uz', a2.airport_uz \
+                        ) AS to_airport, \
+                        f.on_sale, f.total_seats, f.left_seats, \
+                        (SUM(b.hard_block) + SUM(b.soft_block)) AS booked_seats \
+                    FROM flights AS f \
+                    JOIN airports AS a1 ON f.from_airport_id = a1.id \
+                    JOIN airports AS a2 ON f.to_airport_id = a2.id \
+                    LEFT JOIN bookings AS b ON f.id = b.flight_id \
+                    WHERE f.deleted_at IS NULL "
+
+        if from_date and to_date:
+            query += f"AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+                    AND f.on_sale >= '{from_date}' "
+        else:
+            query += f"AND f.departure_date >= '{datetime.now()}' \
+                    AND f.on_sale >= '{datetime.now()}' "
+
+        if search_text and not search_text.isdigit():
+            query += f"AND (f.flight_number LIKE '%{search_text}%' \
+                       OR a1.airport_ru LIKE '%{search_text}%' \
+                       OR a1.airport_en LIKE '%{search_text}%' \
+                       OR a1.airport_uz LIKE '%{search_text}%' \
+                       OR a2.airport_ru LIKE '%{search_text}%' \
+                       OR a2.airport_en LIKE '%{search_text}%' \
+                       OR a2.airport_uz LIKE '%{search_text}%') "
+
+        if search_text and search_text.isdigit():
+            query += f"AND (f.price={search_text} \
+                       OR f.total_seats={search_text} \
+                       OR f.left_seats={search_text} \
+                       OR booked_seats={search_text}) "
+
+        query += f"GROUP BY f.id, a1.id, a2.id \
+                 ORDER BY f.departure_date "
+
+        if page and limit:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page, limit, search_text=None):
-    """ get flights by on_sale is >= now """
-    from_date, to_date = add_time(from_date, to_date)
-
-    query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
-                    json_build_object( \
-                        'id', a1.id, \
-                        'airport_ru', a1.airport_ru, \
-                        'airport_en', a1.airport_en, \
-                        'airport_uz', a1.airport_uz \
-                        ) AS from_airport, \
-                    json_build_object( \
-                        'id', a2.id, \
-                        'airport_ru', a2.airport_ru, \
-                        'airport_en', a2.airport_en, \
-                        'airport_uz', a2.airport_uz \
-                    ) AS to_airport, \
-                    f.on_sale, f.total_seats, f.left_seats \
-                FROM flights AS f \
-                JOIN airports AS a1 ON f.from_airport_id = a1.id \
-                JOIN airports AS a2 ON f.to_airport_id = a2.id \
-                WHERE f.deleted_at IS NULL \
-                AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
-                AND f.on_sale >= '{from_date}'" \
-
-    if search_text is not None:
-        query += f"AND (f.flight_number LIKE '%{search_text}%' \
-                   OR a1.airport_ru LIKE '%{search_text}%' \
-                   OR a1.airport_en LIKE '%{search_text}%' \
-                   OR a1.airport_uz LIKE '%{search_text}%' \
-                   OR a2.airport_ru LIKE '%{search_text}%' \
-                   OR a2.airport_en LIKE '%{search_text}%' \
-                   OR a2.airport_uz LIKE '%{search_text}%') "
-        # OR f.price LIKE '%{search_text}%' \
-        # OR f.left_seats LIKE '%{search_text}%' \
-
-    query += f"ORDER BY f.departure_date \
-                LIMIT {limit} OFFSET {limit * (page - 1)}"
-    return db.execute(text(query)).fetchall()
-
-
-def get_quotas_by_flight_id(db, from_date, to_date, page, limit, search_text=None):
+def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, limit: int, search_text: str = None):
     """ Get booking by flight_id """
     try:
-        from_date, to_date = add_time(from_date, to_date)
+        if from_date and to_date:
+            from_date, to_date = add_time(from_date, to_date)
 
         query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, f.left_seats, \
                     u.username, b.hard_block, b.soft_block \
@@ -187,16 +202,27 @@ def get_quotas_by_flight_id(db, from_date, to_date, page, limit, search_text=Non
                     JOIN bookings AS b ON f.id = b.flight_id \
                     JOIN agents AS a ON b.agent_id = a.id \
                     JOIN users AS u ON a.user_id = u.id \
-                    WHERE f.deleted_at IS NULL \
-                    AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
-                    AND f.on_sale <= '{from_date}'"
+                    WHERE f.deleted_at IS NULL "
 
-        if search_text is not None:
+        if from_date and to_date:
+            query += f"AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' "
+        else:
+            query += f"AND f.departure_date >= '{datetime.now()}' "
+
+        if flight_id:
+            query += f"AND f.id = {flight_id} "
+
+        if search_text and not search_text.isdigit():
             query += f"AND (f.flight_number LIKE '%{search_text}%' \
                        OR u.username LIKE '%{search_text}%') "
 
-        query += f"ORDER BY f.departure_date \
-                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+        if search_text and search_text.isdigit():
+            query += f"AND (f.price = {search_text} \
+                        OR f.left_seats = {search_text}) "
+
+        query += f"ORDER BY f.departure_date "
+        if page and limit:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
         return db.execute(text(query)).fetchall()
     except Exception as e:
@@ -204,52 +230,64 @@ def get_quotas_by_flight_id(db, from_date, to_date, page, limit, search_text=Non
         print(logging.error(e))
 
 
-def get_tickets_by_departure_date_and_on_sale(db: Session, from_date, to_date, page, limit,
-                                              agent_id: int = None, flight_id: int = None, search_text=None):
+def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_date=None,
+                                              page=None, limit=None, agent_id: int = None,
+                                              flight_id: int = None, search_text=None):
     """ get tickets by departure_date is >= now and on_sale <= now """
-    # try:
-    from_date, to_date = add_time(from_date, to_date)
+    try:
+        if from_date and to_date:
+            from_date, to_date = add_time(from_date, to_date)
 
-    query = f"SELECT t.id, t.created_at, t.ticket_number, \
-                    json_build_object( \
-                        'id', f.id, \
-                        'flight_number', f.flight_number, \
-                        'departure_date', f.departure_date, \
-                        'price', f.price, \
-                        'currency', f.currency \
-                    ) AS flight, \
-                    CONCAT(t.first_name, t.surname) AS passenger, \
-                    u.username AS agent, \
-                    t.comment  \
-                FROM tickets AS t \
-                JOIN flights AS f ON t.flight_id = f.id \
-                JOIN agents AS a ON t.agent_id = a.id \
-                JOIN users AS u ON a.user_id = u.id \
-                WHERE f.deleted_at IS NULL \
-                AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
-                AND f.on_sale <= '{from_date}'"
+        query = f"SELECT t.id, t.created_at, t.ticket_number, \
+                        json_build_object( \
+                            'id', f.id, \
+                            'flight_number', f.flight_number, \
+                            'departure_date', f.departure_date, \
+                            'price', f.price, \
+                            'currency', f.currency \
+                        ) AS flight, \
+                        CONCAT(t.first_name, t.surname) AS passenger, \
+                        u.username AS agent, \
+                        t.comment  \
+                    FROM tickets AS t \
+                    JOIN flights AS f ON t.flight_id = f.id \
+                    JOIN agents AS a ON t.agent_id = a.id \
+                    JOIN users AS u ON a.user_id = u.id \
+                    WHERE f.deleted_at IS NULL "
 
-    if agent_id:
-        query += f"AND t.agent_id = {agent_id} "
+        if from_date and to_date:
+            query += f"AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' \
+                   AND f.on_sale <= '{from_date}' "
+        else:
+            query += f"AND f.departure_date >= '{datetime.now()}' \
+                   AND f.on_sale <= '{datetime.now()}' "
 
-    if flight_id:
-        query += f"AND t.flight_id = {flight_id} "
+        if agent_id:
+            query += f"AND t.agent_id = {agent_id} "
 
-    if search_text is not None:
-        query += f"AND (f.flight_number LIKE '%{search_text}%' \
-                   OR u.username LIKE '%{search_text}%' \
-                   OR t.ticket_number LIKE '%{search_text}%' \
-                   OR t.first_name LIKE '%{search_text}%' \
-                   OR t.surname LIKE '%{search_text}%' ) "
+        if flight_id:
+            query += f"AND t.flight_id = {flight_id} "
 
-    if limit is not None and page is not None:
-        query += f"ORDER BY f.departure_date, t.created_at \
-                LIMIT {limit} OFFSET {limit * (page - 1)}"
-    return db.execute(text(query)).fetchall()
+        if search_text and not search_text.isdigit():
+            query += f"AND (f.flight_number LIKE '%{search_text}%' \
+                       OR u.username LIKE '%{search_text}%' \
+                       OR f.flight_number LIKE '%{search_text}%' \
+                       OR t.ticket_number LIKE '%{search_text}%' \
+                       OR t.first_name LIKE '%{search_text}%' \
+                       OR u.username LIKE '%{search_text}%' \
+                       OR t.surname LIKE '%{search_text}%' ) "
 
-    # except Exception as e:
-    #     print(logging.error(traceback.format_exc()))
-    #     print(logging.error(e))
+        if search_text and search_text.isdigit():
+            query += f"AND f.price = {search_text} "
+
+        query += f"ORDER BY f.departure_date, t.created_at "
+        if limit is not None and page is not None:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+        return db.execute(text(query)).fetchall()
+
+    except Exception as e:
+        print(logging.error(traceback.format_exc()))
+        print(logging.error(e))
 
 
 def get_all_users_with_role(db: Session, page: int, limit: int, search_text=None):
@@ -268,14 +306,14 @@ def get_all_users_with_role(db: Session, page: int, limit: int, search_text=None
 
         if search_text is not None:
             query += f"AND (u.username LIKE '%{search_text}%' \
-                          OR u.email LIKE '%{search_text}%' \
+                            OR u.email LIKE '%{search_text}%' \
                             OR r.title_ru LIKE '%{search_text}%' \
                             OR r.title_en LIKE '%{search_text}%' \
                             OR r.title_uz LIKE '%{search_text}%') "
 
-        if limit is not None and page is not None:
-            query += f"ORDER BY u.id \
-                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+        query += f"ORDER BY u.id "
+        if limit and page:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
         return db.execute(text(query)).fetchall()
     except Exception as e:
@@ -308,31 +346,12 @@ def get_all_roles(db: Session, page: int, limit: int, search_text=None):
 
 
 # get tickets by agent_id
-def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=None, limit=None, search_text=None):
+def get_refill_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=None, limit=None, search_text=None):
     """ get tickets by departure_date is >= now and on_sale <= now """
     try:
-        from_date, to_date = add_time(from_date, to_date)
-        # if agent_id:
-        #     return db.query(
-        #         models.Refill, models.Agent, models.User
-        #     ).filter(
-        #         models.Refill.deleted_at == None,
-        #         models.Refill.created_at >= from_date,
-        #         models.Refill.created_at <= to_date,
-        #         models.Refill.agent_id == agent_id,
-        #         models.Agent.id == models.Refill.agent_id,
-        #         models.User.id == models.Refill.receiver_id
-        #     ).order_by(models.Refill.created_at).all()
-        #
-        # return db.query(
-        #     models.Refill, models.Agent, models.User
-        # ).filter(
-        #     models.Refill.deleted_at == None,
-        #     models.Refill.created_at >= from_date,
-        #     models.Refill.created_at <= to_date,
-        #     models.Agent.id == models.Refill.agent_id,
-        #     models.User.id == models.Refill.receiver_id,
-        # ).order_by(models.Refill.created_at.desc()).all()
+        if from_date and to_date:
+            from_date, to_date = add_time(from_date, to_date)
+
         query = f"SELECT r.id, r.created_at, r.amount, r.comment, \
                     json_build_object( \
                         'id', a.id, \
@@ -349,19 +368,23 @@ def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id=None, page
 
         if from_date and to_date:
             query += f"AND r.created_at BETWEEN '{from_date}' AND '{to_date}' "
+        else:
+            query += f"AND r.created_at <= '{datetime.now()}' "
 
         if agent_id:
             query += f"AND r.agent_id = {agent_id} "
 
-        if search_text is not None:
-            query += f"AND (r.amount LIKE '%{search_text}%' \
-                            OR r.comment LIKE '%{search_text}%' \
+        if search_text and not search_text.isdigit():
+            query += f"AND (r.comment LIKE '%{search_text}%' \
                             OR u.username LIKE '%{search_text}%' \
                             OR a.company_name LIKE '%{search_text}%') "
 
-        if limit is not None and page is not None:
-            query += f"ORDER BY r.created_at \
-                    LIMIT {limit} OFFSET {limit * (page - 1)}"
+        if search_text and search_text.isdigit():
+            query += f"AND (r.amount = {search_text}) "
+
+        query += f"ORDER BY r.created_at "
+        if limit and page:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
         return db.execute(text(query)).fetchall()
     except Exception as e:
@@ -369,69 +392,130 @@ def get_tickets_by_agent_id(db: Session, from_date, to_date, agent_id=None, page
         print(logging.error(e))
 
 
-def get_agents_balance(db: Session, agent_id):
+def get_agents_balance(db: Session, agent_id, page: int = None, limit: int = None):
     """ get agents by agent_id if agent_id is None then get all agents """
     try:
+        query = f"SELECT agents.id, agents.company_name, agents.balance \
+                FROM agents \
+                WHERE agents.deleted_at IS NULL "
+
         if agent_id:
-            return db.query(
-                models.Agent
-            ).filter(
-                models.Agent.id == agent_id,
-                models.Agent.deleted_at == None
-            ).all()
-        else:
-            return db.query(
-                models.Agent
-            ).filter(
-                models.Agent.deleted_at == None
-            ).all()
+            query += f"AND agents.id = agent_id "
+
+        query += f"ORDER BY agents.balance "
+        if limit and page:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_agents_discounts(db: Session, agent_id):
+def get_agents_discounts(db: Session, agent_id, page: int, limit: int, searching_text: str = None):
     """ get agents and discounts by agent_id """
     try:
-        if agent_id:
-            return db.query(
-                models.Agent, models.Discount
-            ).filter(
-                models.Agent.id == agent_id,
-                models.Agent.discount_id == models.Discount.id,
-                models.Agent.deleted_at == None,
-                models.User.id == models.Agent.user_id
-            ).all()
+        query = f"SELECT a.id, a.company_name, u.email, \
+                json_build_object('amount', d.amount, 'name', d.name) AS discount, \
+                a.balance, a.is_on_credit \
+                FROM agents AS a \
+                JOIN users AS u ON a.user_id = u.id \
+                JOIN discounts AS d ON a.discount_id = d.id \
+                WHERE a.deleted_at IS NULL "
 
-        return db.query(
-            models.Agent, models.Discount, models.User
-        ).filter(
-            models.Agent.discount_id == models.Discount.id,
-            models.Agent.deleted_at == None,
-            models.User.id == models.Agent.user_id
-        ).all()
+        if agent_id:
+            query += f"AND a.id = {agent_id} "
+
+        if searching_text and not searching_text.isdigit():
+            query += f"AND (a.company_name LIKE '%{searching_text}%' \
+                        OR u.email LIKE '%{searching_text}%' \
+                        OR d.name LIKE '%{searching_text}%') "
+
+        if searching_text and searching_text.isdigit():
+            query += f"AND d.amount = {searching_text} "
+
+        query += f"ORDER BY a.balance "
+        if limit and page:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_discounts(db: Session):
+def get_discounts(db: Session, searching_text, page: int, limit: int):
     """ get discounts """
     try:
-        return db.query(
-            models.Discount
-        ).all()
+        query = f"SELECT d.id, d.name, d.amount \
+                FROM discounts AS d "
+
+        if searching_text and not searching_text.isdigit():
+            query += f"WHERE d.name LIKE '%{searching_text}%' "
+
+        if searching_text and searching_text.isdigit():
+            query += f"WHERE d.amount = {searching_text} "
+
+        query += f"ORDER BY d.amount "
+        if page and limit:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_airports(db: Session):
+def get_guiede(db: Session, searching_text: str, page: int, limit: int):
     """ get airports """
     try:
-        return db.query(
-            models.Airport
-        ).all()
+        query = f"WITH cte AS ( \
+                  SELECT cn.country_ru AS country_ru, \
+                         cn.country_en AS country_en, \
+                         cn.country_uz AS country_uz, \
+                         ct.id AS city_id, \
+                         ct.city_ru AS city_ru, \
+                         ct.city_en AS city_en, \
+                         ct.city_uz AS city_uz, \
+                         a.id AS airport_id, \
+                         a.airport_ru AS airport_ru, \
+                         a.airport_en AS airport_en, \
+                         a.airport_uz AS airport_uz, \
+                  FROM countries c \
+                  LEFT JOIN cities ci ON c.id = ci.country_id \
+                  LEFT JOIN airports a ON ci.id = a.city_id) \
+                  SELECT cn.id, cn.country_ru, cn.country_en, cn.country_ru, \
+                      json_agg(json_build_object( \
+                        'id', ct.id, \
+                        'city_ru', ct.city_ru, \
+                        'city_en', ct.city_en, \
+                        'city_uz', ct.city_uz \
+                      json_agg(json_build_object( \
+                            'id', a.id, \
+                            'airport_ru', a.airport_ru, \
+                            'airport_en', a.airport_en, \
+                            'airport_uz', a.airport_uz)))) AS cities \
+                  FROM cte AS cn \
+                  LEFT JOIN cities AS ct ON cn.id = ct.country_id \
+                  LEFT JOIN airports AS a ON ct.id = a.city_id "
+
+        if searching_text:
+            query += f"AND (cn.country_ru LIKE '%{searching_text}%', \
+                    OR cn.country_en LIKE '%{searching_text}%', \
+                    OR cn.country_uz LIKE '%{searching_text}%', \
+                    OR ct.city_ru LIKE '%{searching_text}%', \
+                    OR ct.city_en LIKE '%{searching_text}%', \
+                    OR ct.city_uz LIKE '%{searching_text}%', \
+                    OR a.airport_ru LIKE '%{searching_text}%', \
+                    OR a.airport_en LIKE '%{searching_text}%', \
+                    OR a.airport_uz LIKE '%{searching_text}%') "
+
+        query += f"GROUP by cn.id \
+                 ORDER BY cn.country_ru"
+        if page and limit:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(text(query)).fetchall()
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
