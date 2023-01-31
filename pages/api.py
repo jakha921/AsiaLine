@@ -68,14 +68,21 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                     f.total_seats, f.left_seats "
 
     if book:
-        query += ", (SUM(b.hard_block) + SUM(b.soft_block)) AS booked_seats "
+        query += ", (SUM(b.hard_block) + SUM(b.soft_block)) AS booked_seats, \
+                    json_agg(json_build_object( \
+                        'id', b.id, \
+                        'hard_block', b.hard_block, \
+                        'soft_block', b.soft_block, \
+                        'agent', a.company_name \
+                    )) AS booking "
 
     query += f"FROM flights AS f \
                 JOIN airports AS a1 ON f.from_airport_id = a1.id \
                 JOIN airports AS a2 ON f.to_airport_id = a2.id "
 
     if book:
-        query += f"LEFT JOIN bookings AS b ON f.id = b.flight_id "
+        query += f"LEFT JOIN bookings AS b ON f.id = b.flight_id \
+                   LEFT JOIN agents AS a ON b.agent_id = a.id "
 
     query += f"WHERE f.deleted_at IS NULL "
 
@@ -108,7 +115,18 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
     if page is not None and limit is not None:
         query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-    return db.execute(query).fetchall()
+    db_query = db.execute(query).fetchall()
+    foo = db_query[4][9]
+    for flight in db_query:
+        if flight[9] is None:
+            foo = list(flight)
+            print(flight[0])
+            print(flight[9])
+            # flight[8] = []
+            # flight[10] = []
+            flight = tuple(foo)
+
+    return db_query
 
 
 # region Statics
@@ -190,18 +208,18 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
         print(logging.error(e))
 
 
-def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, limit: int, search_text: str = None):
+def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, limit: int, search_text: str = None,
+                            agent_id: int = None):
     """ Get booking by flight_id """
     try:
         if from_date and to_date:
             from_date, to_date = add_time(from_date, to_date)
 
         query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, f.left_seats, \
-                    u.username, b.hard_block, b.soft_block \
+                    json_build_object('id', a.id, 'name', a.company_name) AS agent, b.hard_block, b.soft_block \
                     FROM flights AS f \
                     JOIN bookings AS b ON f.id = b.flight_id \
                     JOIN agents AS a ON b.agent_id = a.id \
-                    JOIN users AS u ON a.user_id = u.id \
                     WHERE f.deleted_at IS NULL "
 
         if from_date and to_date:
@@ -212,9 +230,12 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, l
         if flight_id:
             query += f"AND f.id = {flight_id} "
 
+        if agent_id:
+            query += f"AND a.id = {agent_id} "
+
         if search_text and not search_text.isdigit():
             query += f"AND (f.flight_number LIKE '%{search_text}%' \
-                       OR u.username LIKE '%{search_text}%') "
+                       OR a.company_name LIKE '%{search_text}%') "
 
         if search_text and search_text.isdigit():
             query += f"AND (f.price = {search_text} \
