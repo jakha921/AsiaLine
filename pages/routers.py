@@ -142,7 +142,6 @@ async def get_queue_fligths_and_search(db: Session = Depends(get_db),
 @routers.get("/flights/quotas")
 async def get_flight_quotas(db: Session = Depends(get_db),
                             flight_id: int = None,
-                            agent_id: int = None,
                             searching_text: Optional[str] = None,
                             from_date: Optional[date] = None,
                             to_date: Optional[date] = None,
@@ -152,7 +151,7 @@ async def get_flight_quotas(db: Session = Depends(get_db),
     """ get all flight quotes """
     if not check_permissions('flights_quotas', jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-    db_flights = api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, page, limit, searching_text, agent_id)
+    db_flights = api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, page, limit, searching_text)
 
     return db_flights
 

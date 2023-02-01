@@ -115,19 +115,7 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
     if page is not None and limit is not None:
         query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-    db_query = db.execute(query).fetchall()
-    foo = db_query[4][9]
-    for flight in db_query:
-        if flight[9] is None:
-            foo = list(flight)
-            print(flight[0])
-            print(flight[9])
-            # flight[8] = []
-            # flight[10] = []
-            flight = tuple(foo)
-
-    return db_query
-
+    return db.execute(query).fetchall()
 
 # region Statics
 def get_reg_passenger_for_last_30_days(db: Session):
@@ -208,8 +196,7 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
         print(logging.error(e))
 
 
-def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, limit: int, search_text: str = None,
-                            agent_id: int = None):
+def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, limit: int, search_text: str = None):
     """ Get booking by flight_id """
     try:
         if from_date and to_date:
@@ -229,9 +216,6 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, l
 
         if flight_id:
             query += f"AND f.id = {flight_id} "
-
-        if agent_id:
-            query += f"AND a.id = {agent_id} "
 
         if search_text and not search_text.isdigit():
             query += f"AND (f.flight_number LIKE '%{search_text}%' \
