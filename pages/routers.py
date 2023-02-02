@@ -55,7 +55,7 @@ async def get_flights_and_search(db: Session = Depends(get_db),
 
     result = {
         'currency': sort.sort_currency_rate(currency_rate),
-        'flights_count': len(db_flights),
+        'flights_count': len(api.get_flights_by_range_departure_date(db, from_date, to_date)),
         'flights': db_flights
     }
     return result
@@ -84,10 +84,10 @@ async def get_flights_and_search(db: Session = Depends(get_db),
         "currency": sorted_cur,
         "statistics": {
             "new_passengers": db_pass,
-            "sold_tickets": len(db_sold_tickets),
+            "sold_tickets": len(api.get_flights_by_range_departure_date(db, from_date, to_date, book=True)),
             "revenue": sum(ticket.price for ticket in db_sold_tickets),
         },
-        "flights_count": len(db_flights),
+        "flights_count": len(api.get_flights_by_range_departure_date(db, from_date, to_date, book=True)),
         "flights": db_flights
     }
     return result
@@ -109,7 +109,7 @@ async def get_tickets_by_flight_id(db: Session = Depends(get_db),
 
     result = {
         "currency": sorted_cur,
-        "tickets_count": len(db_tickets),
+        "tickets_count": len(api.get_tickets_by_departure_date_and_on_sale(db, flight_id=flight_id)),
         "tickets": db_tickets
     }
     return result
@@ -133,7 +133,7 @@ async def get_queue_fligths_and_search(db: Session = Depends(get_db),
 
     result = {
         'currency': sort.sort_currency_rate(currency_rate),
-        'flights_count': len(db_flights),
+        'flights_count': len(api.get_flights_by_on_sale_date_and_search(db, from_date, to_date)),
         'queue_flights': db_flights
     }
     return result
@@ -153,7 +153,11 @@ async def get_flight_quotas(db: Session = Depends(get_db),
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_flights = api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, page, limit, searching_text)
 
-    return db_flights
+    resault = {
+        'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date)),
+        'flights': db_flights
+    }
+    return resault
 
 
 @routers.get("/tickets/main")
@@ -176,7 +180,8 @@ async def get_tickets(db: Session = Depends(get_db),
 
         result = {
             'currency': sort.sort_currency_rate(currency_rate),
-            'tickets_count': len(db_tickets),
+            'tickets_count': len(api.get_tickets_by_departure_date_and_on_sale(db, from_date=from_date, to_date=to_date,
+                                                                               agent_id=agent_id)),
             'tickets': db_tickets
         }
         return result

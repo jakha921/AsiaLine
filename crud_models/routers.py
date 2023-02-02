@@ -473,7 +473,7 @@ async def create_ticket(ticket: schemas.TicketCreate, hard: bool = False, soft: 
             raise ValueError("Flight not found")
         if db_flight.left_seats <= 0:
             raise ValueError("Flight left seats is less or equal to 0")
-        return crud.Ticket.create(db, ticket, db_flight, hard, soft)
+        return crud.Ticket.create(db, ticket, db_flight, get_user_id(jwt), hard, soft)
     except ValueError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
     except Exception as e:

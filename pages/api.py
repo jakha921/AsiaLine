@@ -52,7 +52,7 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
     if from_date is not None and to_date is not None:
         from_date, to_date = add_time(from_date, to_date)
 
-    query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
+    query = f"SELECT f.id, f.flight_number, f.departure_date, f.arrival_date, f.price, f.currency, \
                     json_build_object( \
                         'id', a1.id, \
                         'airport_ru', a1.airport_ru, \
@@ -65,7 +65,7 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                         'airport_en', a2.airport_en, \
                         'airport_uz', a2.airport_uz \
                     ) AS to_airport, \
-                    f.total_seats, f.left_seats "
+                    f.total_seats, f.left_seats, f.on_sale "
 
     if book:
         query += ", (SUM(b.hard_block) + SUM(b.soft_block)) AS booked_seats, \
@@ -136,7 +136,7 @@ def get_sold_tickets_for_last_30_days(db: Session):
         print(logging.error(e))
 
 
-def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page, limit, search_text=None):
+def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page=None, limit=None, search_text=None):
     """ get flights by on_sale is >= now """
     try:
         if from_date is not None and to_date is not None:
@@ -196,7 +196,7 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
         print(logging.error(e))
 
 
-def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int, limit: int, search_text: str = None):
+def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = None, limit: int = None, search_text: str = None):
     """ Get booking by flight_id """
     try:
         if from_date and to_date:
