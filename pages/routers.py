@@ -154,7 +154,7 @@ async def get_flight_quotas(db: Session = Depends(get_db),
     db_flights = api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, page, limit, searching_text)
 
     resault = {
-        # 'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date)),
+        'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date)),
         'flights': db_flights
     }
     return resault
