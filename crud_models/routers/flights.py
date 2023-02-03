@@ -110,6 +110,7 @@ async def update_flight(flight_id: int,
             raise ValueError("Flight not found")
         if flight.from_airport_id == flight.to_airport_id:
             raise ValueError("Departure airport must be different from arrival airport")
+
         if flight.total_seats and flight.left_seats:
             if flight.total_seats < flight.left_seats:
                 raise ValueError("Total seats must be greater than left seats")
@@ -119,6 +120,9 @@ async def update_flight(flight_id: int,
                 raise ValueError("Total seats must be greater than left seats")
             if flight.left_seats > db_flight.total_seats:
                 raise ValueError("Left seats must be less than total seats")
+        else:
+            flight.total_seats = db_flight.total_seats
+            flight.left_seats = db_flight.left_seats
 
         current_price, db_price = flight.price, db_flight.price
         update = Flight.update(db, db_flight, flight)

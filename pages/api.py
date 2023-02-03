@@ -214,7 +214,8 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
                     FROM flights AS f \
                     LEFT JOIN bookings AS b ON f.id = b.flight_id \
                     JOIN agents AS a ON b.agent_id = a.id \
-                    WHERE f.deleted_at IS NULL "
+                    WHERE f.deleted_at IS NULL \
+                    AND b.deleted_at IS NULL "
 
         if from_date and to_date:
             query += f"AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' "

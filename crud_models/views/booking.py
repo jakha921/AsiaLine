@@ -61,7 +61,7 @@ class Booking:
         diff = booking.hard_block + booking.soft_block - patch.hard_block - patch.soft_block
         flight.left_seats += diff
         if flight.left_seats < 0:
-            return {'error': 'Flight has not enough seats'}
+            raise ValueError('Flight has not enough seats')
 
         for key, value in patch.dict().items():
             if value is not None:

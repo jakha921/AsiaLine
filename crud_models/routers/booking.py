@@ -114,9 +114,6 @@ async def update_booking(booking_id: int,
         return Booking.update(db, booking, db_booking, db_flight)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e:
-        print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.delete("/booking/{booking_id}", tags=["bookings"])
