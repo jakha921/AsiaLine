@@ -202,10 +202,17 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
         if from_date and to_date:
             from_date, to_date = add_time(from_date, to_date)
 
-        query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, f.left_seats, \
-                    json_build_object('id', a.id, 'name', a.company_name) AS agent, b.hard_block, b.soft_block \
+        query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, f.left_seats, f.total_seats, \
+                    json_agg(\
+                        json_build_object(\
+                            'booking_id', b.id, \
+                            'hard_block', b.hard_block, \
+                            'soft_block', b.soft_block, \
+                            'agent_id', a.id, \
+                            'company_name', a.company_name) \
+                    ) AS bookings \
                     FROM flights AS f \
-                    JOIN bookings AS b ON f.id = b.flight_id \
+                    LEFT JOIN bookings AS b ON f.id = b.flight_id \
                     JOIN agents AS a ON b.agent_id = a.id \
                     WHERE f.deleted_at IS NULL "
 
@@ -224,6 +231,8 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
         if search_text and search_text.isdigit():
             query += f"AND (f.price = {search_text} \
                         OR f.left_seats = {search_text}) "
+
+        query += f"GROUP BY f.id "
 
         query += f"ORDER BY f.departure_date "
         if page and limit:
