@@ -99,9 +99,6 @@ def check_permissions(allowed_permissions: str, jwt_token: dict) -> bool:
 
 
 def get_user_id(jwt_token) -> int:
-    foo = decode_jwt(jwt_token)
-    print(foo)
-    print(foo.get("id"))
     return decode_jwt(jwt_token).get("id")
 
 

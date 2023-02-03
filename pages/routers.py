@@ -4,8 +4,8 @@ from typing import Optional
 from datetime import datetime, date, timedelta
 import logging
 
-from auth.auth.auth_bearer import JWTBearer
-from auth.auth.auth_handler import check_permissions
+from auth.auth_token.auth_bearer import JWTBearer
+from auth.auth_token.auth_handler import check_permissions
 from db.database import get_db
 from pages import api, sort
 
@@ -154,7 +154,7 @@ async def get_flight_quotas(db: Session = Depends(get_db),
     db_flights = api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, page, limit, searching_text)
 
     resault = {
-        'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date)),
+        # 'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date)),
         'flights': db_flights
     }
     return resault

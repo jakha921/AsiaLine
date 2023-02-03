@@ -3,8 +3,26 @@ from starlette.requests import Request
 from starlette.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from users.routers import routers as app_router
-from crud_models.routers import routers as crud_router
+from crud_models.routers.countries import routers as countries
+from crud_models.routers.cities import routers as cities
+from crud_models.routers.airports import routers as airports
+from crud_models.routers.flights import routers as flights
+from crud_models.routers.tickets import routers as tickets
+from crud_models.routers.booking import routers as booking
+from crud_models.routers.scraped_price import routers as scraped_price
+from crud_models.routers.genders import routers as genders
+from crud_models.routers.refills import routers as refills
+from crud_models.routers.ticket_classes import routers as ticket_classes
+
+from users.routers.auth_token import routers as auth_token
+from users.routers.roles import routers as roles
+from users.routers.users import routers as users
+from users.routers.sections import routers as sections
+from users.routers.permissions import routers as permissions
+from users.routers.role_permissions import routers as role_permissions
+from users.routers.agents import routers as agents
+from users.routers.discounts import routers as discounts
+
 from pages.routers import routers as logics_router
 from db.database import SessionLocal
 
@@ -37,10 +55,30 @@ async def db_session_middleware(request: Request, call_next):
         request.state.db.close()
     return response
 
+# users
+app.include_router(auth_token)
+app.include_router(roles)
+app.include_router(users)
+app.include_router(sections)
+app.include_router(permissions)
+app.include_router(role_permissions)
+app.include_router(agents)
+app.include_router(discounts)
 
-# include router
-app.include_router(app_router)
-app.include_router(crud_router)
+# CRUDs
+app.include_router(countries)
+app.include_router(cities)
+app.include_router(airports)
+app.include_router(flights)
+app.include_router(tickets)
+app.include_router(booking)
+app.include_router(scraped_price)
+app.include_router(genders)
+app.include_router(refills)
+app.include_router(ticket_classes)
+
+
+# pages
 app.include_router(logics_router, prefix="", tags=["pages"])
 
 if __name__ == "__main__":
