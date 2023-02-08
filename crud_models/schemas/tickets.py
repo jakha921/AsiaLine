@@ -134,6 +134,7 @@ class Ticket(TicketUpdate):
     id: int
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
+    is_booked: bool
 
     class Config:
         orm_mode = True
@@ -141,6 +142,7 @@ class Ticket(TicketUpdate):
             "example": {
                 "id": 1,
                 **TicketCreate.Config.schema_extra.get("example"),
+                "is_booked": False,
                 "created_at": "2021-07-01T10:00:00",
                 "updated_at": "2021-07-01T10:00:00",
             }

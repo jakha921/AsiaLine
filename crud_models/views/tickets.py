@@ -96,6 +96,8 @@ class Ticket:
                 db_flight.left_seats -= 1
 
             db_ticket = models.Ticket(**ticket.dict())
+            if hard or soft:
+                db_ticket.is_booked = True
             db_ticket.price = price
             db_ticket.ticket_number = "WZ " + str(random.randint(10000000, 99999999))
             db_ticket.actor_id = user_id

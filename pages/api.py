@@ -265,7 +265,7 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
                         ) AS flight, \
                         CONCAT(t.first_name, t.surname) AS passenger, \
                         u.username AS agent, \
-                        t.comment  \
+                        t.comment, t.is_booked  \
                     FROM tickets AS t \
                     JOIN flights AS f ON t.flight_id = f.id \
                     JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \

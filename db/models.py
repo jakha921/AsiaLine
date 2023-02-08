@@ -375,6 +375,7 @@ class Ticket(Base):
     comment = Column(String(255), nullable=True)
     taking_amount = Column(Integer, default=0)  # Сумма, которую берет агент/кассир/бронзировщик за бронирование
     luggage = Column(Boolean, default=False)
+    is_booked = Column(Boolean, default=False)
     platform = Column(Enum('web', 'ios', 'android', name='Platform'), default='web')
     status_id = Column(Integer, ForeignKey('ticket_statuses.id'), nullable=False)
     actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
