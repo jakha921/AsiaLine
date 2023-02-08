@@ -111,9 +111,10 @@ async def update_flight(flight_id: int,
             if flight.total_seats < flight.left_seats:
                 raise ValueError("Total seats must be greater than left seats")
 
-        if flight.total_seats or flight.left_seats:
+        if flight.total_seats:
             if flight.total_seats < db_flight.left_seats:
                 raise ValueError("Total seats must be greater than left seats")
+        elif flight.left_seats:
             if flight.left_seats > db_flight.total_seats:
                 raise ValueError("Left seats must be less than total seats")
         else:

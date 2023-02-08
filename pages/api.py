@@ -52,7 +52,7 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
     if from_date is not None and to_date is not None:
         from_date, to_date = add_time(from_date, to_date)
 
-    query = f"SELECT f.id, f.flight_number, f.departure_date, f.arrival_date, f.price, f.currency, \
+    query = f"SELECT f.id, fg.flight_number, f.departure_date, f.arrival_date, f.price, f.currency, \
                     json_build_object( \
                         'id', a1.id, \
                         'airport_ru', a1.airport_ru, \
@@ -77,8 +77,9 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                     )) AS booking "
 
     query += f"FROM flights AS f \
-                JOIN airports AS a1 ON f.from_airport_id = a1.id \
-                JOIN airports AS a2 ON f.to_airport_id = a2.id "
+                JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
+                JOIN airports AS a1 ON fg.from_airport_id = a1.id \
+                JOIN airports AS a2 ON fg.to_airport_id = a2.id "
 
     if book:
         query += f"LEFT JOIN bookings AS b ON f.id = b.flight_id \
@@ -94,7 +95,7 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                AND f.on_sale <= '{datetime.now()}' "
 
     if search_text and not search_text.isdigit():
-        query += f"AND (f.flight_number LIKE '%{search_text}%' \
+        query += f"AND (fg.flight_number LIKE '%{search_text}%' \
                 OR a1.airport_ru LIKE '%{search_text}%' \
                 OR a1.airport_en LIKE '%{search_text}%' \
                 OR a1.airport_uz LIKE '%{search_text}%' \
@@ -109,7 +110,7 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                 OR booked_seats={search_text}) "
 
     if book:
-        query += f"GROUP BY f.id, a1.id, a2.id "
+        query += f"GROUP BY fg.flight_number, f.id, a1.id, a2.id "
 
     query += f"ORDER BY f.departure_date "
     if page is not None and limit is not None:
@@ -202,7 +203,7 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
         if from_date and to_date:
             from_date, to_date = add_time(from_date, to_date)
 
-        query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, f.left_seats, f.total_seats, \
+        query = f"SELECT f.id, fg.flight_number, f.departure_date, f.price, f.currency, f.left_seats, f.total_seats, \
                     json_agg(\
                         json_build_object(\
                             'booking_id', b.id, \
@@ -212,6 +213,7 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
                             'company_name', a.company_name) \
                     ) AS bookings \
                     FROM flights AS f \
+                    JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
                     LEFT JOIN bookings AS b ON f.id = b.flight_id \
                     JOIN agents AS a ON b.agent_id = a.id \
                     WHERE f.deleted_at IS NULL \
@@ -226,7 +228,7 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
             query += f"AND f.id = {flight_id} "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (f.flight_number LIKE '%{search_text}%' \
+            query += f"AND (fg.flight_number LIKE '%{search_text}%' \
                        OR a.company_name LIKE '%{search_text}%') "
 
         if search_text and search_text.isdigit():
@@ -256,7 +258,7 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
         query = f"SELECT t.id, t.created_at, t.ticket_number, \
                         json_build_object( \
                             'id', f.id, \
-                            'flight_number', f.flight_number, \
+                            'flight_number', fg.flight_number, \
                             'departure_date', f.departure_date, \
                             'price', f.price, \
                             'currency', f.currency \
@@ -266,6 +268,7 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
                         t.comment  \
                     FROM tickets AS t \
                     JOIN flights AS f ON t.flight_id = f.id \
+                    JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
                     JOIN agents AS a ON t.agent_id = a.id \
                     JOIN users AS u ON a.user_id = u.id \
                     WHERE f.deleted_at IS NULL "
@@ -284,9 +287,8 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
             query += f"AND t.flight_id = {flight_id} "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (f.flight_number LIKE '%{search_text}%' \
+            query += f"AND (fg.flight_number LIKE '%{search_text}%' \
                        OR u.username LIKE '%{search_text}%' \
-                       OR f.flight_number LIKE '%{search_text}%' \
                        OR t.ticket_number LIKE '%{search_text}%' \
                        OR t.first_name LIKE '%{search_text}%' \
                        OR u.username LIKE '%{search_text}%' \

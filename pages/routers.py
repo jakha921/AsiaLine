@@ -55,7 +55,7 @@ async def get_flights_and_search(db: Session = Depends(get_db),
 
     result = {
         'currency': sort.sort_currency_rate(currency_rate),
-        'flights_count': len(api.get_flights_by_range_departure_date(db, from_date, to_date)),
+        'flights_count': len(api.get_flights_by_range_departure_date(db, from_date, to_date, search_text=searching_text)),
         'flights': db_flights
     }
     return result
@@ -87,7 +87,8 @@ async def get_flights_and_search(db: Session = Depends(get_db),
             "sold_tickets": len(api.get_flights_by_range_departure_date(db, from_date, to_date, book=True)),
             "revenue": sum(ticket.price for ticket in db_sold_tickets),
         },
-        "flights_count": len(api.get_flights_by_range_departure_date(db, from_date, to_date, book=True)),
+        "flights_count": len(api.get_flights_by_range_departure_date(db, from_date, to_date, book=True,
+                                                                     search_text=searching_text)),
         "flights": db_flights
     }
     return result
@@ -105,11 +106,10 @@ async def get_tickets_by_flight_id(db: Session = Depends(get_db),
 
     db_currency_rate = api.get_currency_last_item(db)
 
-    sorted_cur = sort.sort_currency_rate(db_currency_rate)
-
     result = {
-        "currency": sorted_cur,
-        "tickets_count": len(api.get_tickets_by_departure_date_and_on_sale(db, flight_id=flight_id)),
+        "currency": sort.sort_currency_rate(db_currency_rate),
+        "tickets_count": len(api.get_tickets_by_departure_date_and_on_sale(db, flight_id=flight_id,
+                                                                           search_text=searching_text)),
         "tickets": db_tickets
     }
     return result
@@ -129,11 +129,11 @@ async def get_queue_fligths_and_search(db: Session = Depends(get_db),
 
     db_flights = api.get_flights_by_on_sale_date_and_search(db, from_date, to_date, page, limit, searching_text)
 
-    currency_rate = api.get_currency_last_item(db)
+    # db_currency_rate = api.get_currency_last_item(db)
 
     result = {
-        'currency': sort.sort_currency_rate(currency_rate),
-        'flights_count': len(api.get_flights_by_on_sale_date_and_search(db, from_date, to_date)),
+        # 'currency': sort.sort_currency_rate(db_currency_rate),
+        'flights_count': len(api.get_flights_by_on_sale_date_and_search(db, from_date, to_date)) if db_flights else 0,
         'queue_flights': db_flights
     }
     return result
@@ -154,7 +154,7 @@ async def get_flight_quotas(db: Session = Depends(get_db),
     db_flights = api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, page, limit, searching_text)
 
     resault = {
-        'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date)),
+        'flights_count': len(api.get_quotas_by_flight_id(db, flight_id, from_date, to_date, search_text=searching_text)) if db_flights else 0,
         'flights': db_flights
     }
     return resault
@@ -181,7 +181,8 @@ async def get_tickets(db: Session = Depends(get_db),
         result = {
             'currency': sort.sort_currency_rate(currency_rate),
             'tickets_count': len(api.get_tickets_by_departure_date_and_on_sale(db, from_date=from_date, to_date=to_date,
-                                                                               agent_id=agent_id)),
+                                                                               agent_id=agent_id,
+                                                                               search_text=searching_text)),
             'tickets': db_tickets
         }
         return result
