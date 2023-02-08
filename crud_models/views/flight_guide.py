@@ -25,6 +25,11 @@ class FlightGuide:
             filter(models.FlightGuide.id == flight_guide_id).first()
 
     @staticmethod
+    def get_by_flight_number(db: Session, flight_number: str):
+        return db.query(models.FlightGuide). \
+            filter(models.FlightGuide.flight_number == flight_number).first()
+
+    @staticmethod
     def create(db: Session, flight_guide: schemas.FlightGuideCreate):
         db_flight_guide = models.FlightGuide(**flight_guide.dict())
         db.add(db_flight_guide)

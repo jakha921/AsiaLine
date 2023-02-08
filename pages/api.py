@@ -143,7 +143,7 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
         if from_date is not None and to_date is not None:
             from_date, to_date = add_time(from_date, to_date)
 
-        query = f"SELECT f.id, f.flight_number, f.departure_date, f.price, f.currency, \
+        query = f"SELECT f.id, fg.flight_number, f.departure_date, f.price, f.currency, \
                         json_build_object( \
                             'id', a1.id, \
                             'airport_ru', a1.airport_ru, \
@@ -159,8 +159,9 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
                         f.on_sale, f.total_seats, f.left_seats, \
                         (SUM(b.hard_block) + SUM(b.soft_block)) AS booked_seats \
                     FROM flights AS f \
-                    JOIN airports AS a1 ON f.from_airport_id = a1.id \
-                    JOIN airports AS a2 ON f.to_airport_id = a2.id \
+                    JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
+                    JOIN airports AS a1 ON fg.from_airport_id = a1.id \
+                    JOIN airports AS a2 ON fg.to_airport_id = a2.id \
                     LEFT JOIN bookings AS b ON f.id = b.flight_id \
                     WHERE f.deleted_at IS NULL "
 
@@ -186,7 +187,7 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
                        OR f.left_seats={search_text} \
                        OR booked_seats={search_text}) "
 
-        query += f"GROUP BY f.id, a1.id, a2.id \
+        query += f"GROUP BY fg.flight_number, f.id, a1.id, a2.id \
                  ORDER BY f.departure_date "
 
         if page and limit:

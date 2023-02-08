@@ -57,6 +57,8 @@ async def create_flight_guide(flight_guide: schemas.FlightGuideCreate,
     try:
         if flight_guide.from_airport_id == flight_guide.to_airport_id:
             raise ValueError("Departure airport must be different from arrival airport")
+        if FlightGuide.get_by_flight_number(db, flight_guide.flight_number):
+            raise ValueError("FlightGuide with this flight number already exists")
         db_flight_guide = FlightGuide.create(db, flight_guide)
         return schemas.FlightGuide.from_orm(db_flight_guide)
     except ValueError as e:

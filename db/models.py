@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy.orm import relationship
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Date, Float
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Date, Float, UniqueConstraint
 
 from db.database import Base
 
@@ -116,6 +116,8 @@ class RolePermission(Base):
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     permission_id = Column(Integer, ForeignKey("permissions.id"), nullable=False)
 
+    __table_args__ = (UniqueConstraint('role_id', 'permission_id', name='_role_permission_uc'),)
+
     role = relationship("Role", backref="role_permissions")
     permission = relationship("Permission", backref="role_permissions")
 
@@ -193,10 +195,11 @@ class FlightGuide(Base):
 
     id = Column(Integer, primary_key=True, index=True, unique=True)
     company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
-    flight_number = Column(String(255), nullable=False)
+    flight_number = Column(String(255), nullable=False, unique=True)
     from_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
     to_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
     luggage = Column(Integer, default=0)
+    luggage_weight = Column(Integer, default=0, nullable=True)
 
     company = relationship("Company", backref="flight_guides")
     from_airport = relationship("Airport", foreign_keys=[from_airport_id])
@@ -282,6 +285,8 @@ class Booking(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
+
+    __tablde_args__ = (UniqueConstraint('flight_id', 'agent_id', name='unique_booking'),)
 
     flight = relationship("Flight", backref="bookings")
     agent = relationship("Agent", backref="bookings")

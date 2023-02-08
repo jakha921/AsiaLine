@@ -129,10 +129,10 @@ async def get_queue_fligths_and_search(db: Session = Depends(get_db),
 
     db_flights = api.get_flights_by_on_sale_date_and_search(db, from_date, to_date, page, limit, searching_text)
 
-    # db_currency_rate = api.get_currency_last_item(db)
+    db_currency_rate = api.get_currency_last_item(db)
 
     result = {
-        # 'currency': sort.sort_currency_rate(db_currency_rate),
+        'currency': sort.sort_currency_rate(db_currency_rate),
         'flights_count': len(api.get_flights_by_on_sale_date_and_search(db, from_date, to_date)) if db_flights else 0,
         'queue_flights': db_flights
     }
