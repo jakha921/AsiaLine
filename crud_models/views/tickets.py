@@ -30,46 +30,48 @@ class Ticket:
         return db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
 
     @staticmethod
-    def update(db: Session, db_ticket: models.Ticket, ticket: schemas.TicketUpdate):
-        for key, value in ticket.dict().items():
-            if value is not None:
-                setattr(db_ticket, key, value)
-        db.commit()
-        return db_ticket
-
-    @staticmethod
     def create(db: Session, ticket: schemas.TicketCreate, db_flight: models.Flight, user_id: int, hard: bool = False,
                soft: bool = False):
         """ get from flight agent and him discount calculate price and create ticket than create agent debt history"""
         try:
             if hard or soft:
-                query = db.query(models.Agent, models.Discount, models.Booking). \
+                query = db.query(models.Agent, models.Discount, models.Booking, models.FlightGuide). \
                     join(models.Discount, models.Agent.discount_id == models.Discount.id). \
                     join(models.Booking, models.Agent.id == models.Booking.agent_id). \
+                    join(models.FlightGuide, models.FlightGuide.id == db_flight.flight_guide_id). \
                     filter(models.Agent.id == ticket.agent_id,
                            models.Discount.id == models.Agent.discount_id,
+                           models.FlightGuide.id == db_flight.flight_guide_id,
                            and_(models.Booking.agent_id == ticket.agent_id,
                                 models.Booking.flight_id == db_flight.id)).first()
             else:
-                query = db.query(models.Agent, models.Discount). \
+                query = db.query(models.Agent, models.Discount, models.FlightGuide). \
                     join(models.Discount, models.Agent.discount_id == models.Discount.id). \
+                    join(models.FlightGuide, models.FlightGuide.id == db_flight.flight_guide_id). \
                     filter(models.Agent.id == ticket.agent_id,
                            models.Discount.id == models.Agent.discount_id).first()
 
-            agent, discount, booking = models.Agent(), models.Discount(), models.Booking()
+            agent, discount, booking, flight_guide = models.Agent(), models.Discount(), models.Booking(), \
+                models.FlightGuide()
 
             if hard or soft:
-                agent, discount, booking = query
+                agent, discount, booking, flight_guide = query
             else:
-                agent, discount = query["Agent"], query["Discount"]
+                agent, discount, flight_guide = query["Agent"], query["Discount"], query["FlightGuide"]
+
             if agent is None:
                 raise ValueError('Agent not found')
+
             if discount.amount is not None:
                 price = db_flight.price - discount.amount
             else:
                 price = db_flight.price
 
-            price += ticket.luggage
+            if hard:
+                price -= db_flight.price - booking.price
+
+            if ticket.luggage:
+                price += flight_guide.luggage
 
             if not agent.is_on_credit:
                 if agent.balance - price < 0:
@@ -114,25 +116,26 @@ class Ticket:
             print(logging.error(e))
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble creating")
 
-    # @staticmethod
-    # def delete(db: Session, db_ticket: models.Ticket):
-    #     try:
-    #         if db_ticket.deleted_at is not None:
-    #             raise ValueError('Ticket already deleted')
-    #
-    #         db_ticket.deleted_at = datetime.now()
-    #         db.commit()
-    #
-    #         db_flight = db.query(models.Flight).filter(models.Flight.id == db_ticket.flight_id).first()
-    #         db_flight.left_seats += 1
-    #         db.commit()
-    #
-    #         return {"message": "Ticket deleted successfully and flight seats increased"}
-    #     except ValueError as e:
-    #         raise HTTPException(status_code=400, detail=str(e))
-    #     except Exception as e:
-    #         print(logging.error(e))
-    #         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Ticket has trouble deleting")
+    @staticmethod
+    def update(db: Session, db_ticket: models.Ticket, ticket: schemas.TicketUpdate, flight):
+        if db_ticket.luggage != ticket.luggage:
+            luggage_price = db.query(models.FlightGuide, models.Agent).\
+                join(models.Agent, models.Agent.id == db_ticket.agent_id).\
+                filter(models.FlightGuide.id == flight.flight_guide_id).first()
+
+            if not db_ticket.luggage and ticket.luggage:
+                db_ticket.price += luggage_price[0].luggage
+                luggage_price[1].balance -= luggage_price[0].luggage
+
+            if db_ticket.luggage and not ticket.luggage:
+                db_ticket.price -= luggage_price[0].luggage
+                luggage_price[1].balance += luggage_price[0].luggage
+
+        for key, value in ticket.dict().items():
+            if value is not None:
+                setattr(db_ticket, key, value)
+        db.commit()
+        return db_ticket
 
     @staticmethod
     def cancel(db: Session, ticket_cancel: schemas.TicketCancel):

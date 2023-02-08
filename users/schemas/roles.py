@@ -12,11 +12,11 @@ class RoleCreate(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "name": "booking",
-                "title_ru": "Бронирование",
-                "title_en": "Booking",
-                "title_uz": "Rezervatsiya",
-                "description": "Роль для бронирования"
+                "name": "admin",
+                "title_ru": "Администратор",
+                "title_en": "Administrator",
+                "title_uz": "Administrator",
+                "description": "Роль для администратора"
             }
         }
 

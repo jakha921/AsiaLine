@@ -6,19 +6,18 @@ class CountryCreate(BaseModel):
     country_ru: str
     country_en: Optional[str]
     country_uz: Optional[str]
-    short_name: str
-    code: str
+    code: Optional[str]
 
-    @validator('short_name')
-    def short_name_must_be_less_than_3_characters(cls, v):
-        if len(v) > 2:
-            raise ValueError('short_name must be less than 2 characters')
+    @validator('code')
+    def code_must_be_upper(cls, v):
+        if v != v.upper():
+            raise ValueError('code must be upper')
         return v
 
     @validator('code')
-    def code_must_be_less_than_3_characters(cls, v):
-        if len(v) > 3:
-            raise ValueError('code must be less than 3 characters')
+    def code_must_be_3_characters(cls, v):
+        if len(v) != 3:
+            raise ValueError('code must be 3 characters')
         return v
 
     class Config:
@@ -27,7 +26,6 @@ class CountryCreate(BaseModel):
                 "country_ru": "Россия",
                 "country_en": "Russia",
                 "country_uz": "Rossiya",
-                "short_name": "RU",
                 "code": "RUS"
             }
         }
@@ -35,8 +33,6 @@ class CountryCreate(BaseModel):
 
 class CountryUpdate(CountryCreate):
     country_ru: Optional[str]
-    short_name: Optional[str]
-    code: Optional[str]
 
 
 class Country(CountryCreate):

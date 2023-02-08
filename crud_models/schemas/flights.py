@@ -6,9 +6,7 @@ from db.models import CurrencyCode
 
 
 class FlightCreate(BaseModel):
-    flight_number: str
-    from_airport_id: int
-    to_airport_id: int
+    flight_guide_id: int
     departure_date: datetime
     arrival_date: datetime
     price: int
@@ -21,18 +19,6 @@ class FlightCreate(BaseModel):
     def currency_must_be_in_currency_code(cls, v):
         if v not in ['USD', 'EUR', 'RUB', 'UZS']:
             raise ValueError('currency must be in CurrencyCode[USD, EUR, RUB, UZS]')
-        return v
-
-    @validator('from_airport_id')
-    def from_airport_id_must_be_greater_than_0(cls, v):
-        if v < 1:
-            raise ValueError('from_airport_id must be greater than 0')
-        return v
-
-    @validator('to_airport_id')
-    def to_airport_id_must_be_greater_than_0(cls, v):
-        if v < 1:
-            raise ValueError('to_airport_id must be greater than 0')
         return v
 
     @validator('departure_date')
@@ -64,9 +50,7 @@ class FlightCreate(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "flight_number": "WZ 1234",
-                "from_airport_id": 1,
-                "to_airport_id": 2,
+                "flight_guide_id": 1,
                 "departure_date": (datetime.now() + timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"),
                 "arrival_date": (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
                 "price": 1500,
@@ -78,9 +62,7 @@ class FlightCreate(BaseModel):
 
 
 class FlightUpdate(FlightCreate):
-    flight_number: Optional[str]
-    from_airport_id: Optional[int]
-    to_airport_id: Optional[int]
+    flight_guide_id: Optional[int]
     departure_date: Optional[datetime]
     arrival_date: Optional[datetime]
     price: Optional[int]

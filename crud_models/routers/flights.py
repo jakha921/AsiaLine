@@ -69,8 +69,6 @@ async def create_flight(flight: schemas.FlightCreate,
     if not check_permissions("create_flight", jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     try:
-        if flight.from_airport_id == flight.to_airport_id:
-            raise ValueError("Departure airport must be different from arrival airport")
         create = Flight.create(db, flight, get_user_id(jwt))
         if flight.price > 0:
             FlightPriceHistory.create(db, flight.price, create.id)
@@ -108,8 +106,6 @@ async def update_flight(flight_id: int,
         db_flight = Flight.get_by_id(db, flight_id)
         if db_flight is None:
             raise ValueError("Flight not found")
-        if flight.from_airport_id == flight.to_airport_id:
-            raise ValueError("Departure airport must be different from arrival airport")
 
         if flight.total_seats and flight.left_seats:
             if flight.total_seats < flight.left_seats:
@@ -202,11 +198,11 @@ async def set_flight_for_sale(flight_id: int,
 
 
 @routers.get("/flight/{flight_id}/prices", response_model=list[schemas.FlightHistory], tags=["flights"])
-async def get_flight_price_history_by_fligh_id(flight_id: int,
-                                               page: Optional[int] = None,
-                                               limit: Optional[int] = None,
-                                               jwt: dict = Depends(JWTBearer()),
-                                               db: Session = Depends(get_db)):
+async def get_flight_price_history_by_flight_id(flight_id: int,
+                                                page: Optional[int] = None,
+                                                limit: Optional[int] = None,
+                                                jwt: dict = Depends(JWTBearer()),
+                                                db: Session = Depends(get_db)):
     """ Get flight ID and return list of flight price history for this flight """
     if not check_permissions("get_flight_prices", jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")

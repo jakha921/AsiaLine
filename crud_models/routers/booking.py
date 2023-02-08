@@ -10,6 +10,7 @@ from crud_models.views.flights import Flight
 from db.database import get_db
 from crud_models.schemas import booking as schemas
 from crud_models.views.booking import Booking
+from users.views.agents import Agent
 
 routers = APIRouter()
 
@@ -77,6 +78,8 @@ async def create_booking(booking: schemas.BookingCreate,
             raise ValueError("Flight not found")
         if db_flight.left_seats < 0:
             raise ValueError("Flight left seats is less than 0")
+        if not Agent.get_by_id(db, booking.agent_id):
+            raise ValueError("Agent not found")
 
         return Booking.create(db, booking, db_flight)
     except ValueError as e:

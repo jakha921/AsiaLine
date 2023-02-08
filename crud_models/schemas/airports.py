@@ -3,10 +3,11 @@ from pydantic import BaseModel, validator
 
 
 class AirportCreate(BaseModel):
+    city_id: int
     airport_ru: str
     airport_en: Optional[str]
     airport_uz: Optional[str]
-    city_id: int
+    code: Optional[str]
 
     @validator('city_id')
     def city_id_gt_than_0(cls, v):
@@ -14,13 +15,26 @@ class AirportCreate(BaseModel):
             raise ValueError('city_id must be greater than 0')
         return v
 
+    @validator('code')
+    def code_must_be_upper(cls, v):
+        if v != v.upper():
+            raise ValueError('code must be upper')
+        return v
+
+    @validator('code')
+    def code_must_be_3_characters(cls, v):
+        if len(v) != 3:
+            raise ValueError('code must be 3 characters')
+        return v
+
     class Config:
         schema_extra = {
             "example": {
+                "city_id": 1,
                 "airport_ru": "Шереметьево",
                 "airport_en": "Sheremetyevo",
                 "airport_uz": "Sheremetyevo",
-                "city_id": 1
+                "code": "SVO"
             }
         }
 

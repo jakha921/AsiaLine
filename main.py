@@ -6,6 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from crud_models.routers.countries import routers as countries
 from crud_models.routers.cities import routers as cities
 from crud_models.routers.airports import routers as airports
+from crud_models.routers.company import routers as company
+from crud_models.routers.flight_guide import routers as flight_guide
 from crud_models.routers.flights import routers as flights
 from crud_models.routers.tickets import routers as tickets
 from crud_models.routers.booking import routers as booking
@@ -62,13 +64,15 @@ app.include_router(users)
 app.include_router(sections)
 app.include_router(permissions)
 app.include_router(role_permissions)
-app.include_router(agents)
 app.include_router(discounts)
+app.include_router(agents)
 
 # CRUDs
 app.include_router(countries)
 app.include_router(cities)
 app.include_router(airports)
+app.include_router(company)
+app.include_router(flight_guide)
 app.include_router(flights)
 app.include_router(tickets)
 app.include_router(booking)

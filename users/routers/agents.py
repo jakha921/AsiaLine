@@ -20,11 +20,11 @@ async def get_agents_list(page: Optional[int] = None,
     if not check_permissions('get_agents', jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    # try:
-    return schemas.Agent.from_orm(Agent.get_list(page, limit, db))
-    # except Exception as e:
-    #     print(logging.error(e))
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
+    try:
+        return schemas.Agent.from_orm(Agent.get_list(page, limit, db))
+    except Exception as e:
+        print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.get("/agent/{agent_id}", tags=["agents"])

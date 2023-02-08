@@ -17,7 +17,7 @@ class TicketCreate(BaseModel):
     class_id: int
     agent_id: int
     comment: Optional[str]
-    luggage: int
+    luggage: bool
     status_id: int = 1
     platform: Platform = Platform.WEB
 
@@ -98,13 +98,13 @@ class TicketCreate(BaseModel):
                 "class_id": 1,
                 "agent_id": 1,
                 "comment": "Not required (type: str)",
-                "luggage": 500,
+                "luggage": True,
             }
         }
 
 
 class TicketUpdate(TicketCreate):
-    flight_id: Optional[int]
+    flight_id: int
     price: Optional[int]
     first_name: Optional[str]
     surname: Optional[str]
@@ -118,7 +118,7 @@ class TicketUpdate(TicketCreate):
     agent_id: Optional[int]
     discount_id: Optional[int]
     comment: Optional[str]
-    luggage: Optional[int]
+    luggage: Optional[bool]
     actor_id: Optional[int]
     platform: Optional[str]
 

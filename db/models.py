@@ -130,8 +130,7 @@ class Country(Base):
     country_ru = Column(String(255), nullable=False)
     country_en = Column(String(255), nullable=True)
     country_uz = Column(String(255), nullable=True)
-    short_name = Column(String(2), nullable=False)
-    code = Column(String(3), nullable=False)
+    code = Column(String(3), nullable=True)
 
     def __repr__(self):
         return f"Country(id={self.id}, country_ru={self.country_ru}, short_name={self.short_name})"
@@ -144,6 +143,7 @@ class City(Base):
     city_ru = Column(String(255), nullable=False)
     city_en = Column(String(255), nullable=True)
     city_uz = Column(String(255), nullable=True)
+    code = Column(String(3), nullable=True)
     country_id = Column(Integer, ForeignKey("countries.id"), nullable=False)
 
     country = relationship("Country", backref="cities")
@@ -159,6 +159,7 @@ class Airport(Base):
     airport_ru = Column(String(255), nullable=False)
     airport_en = Column(String(255), nullable=True)
     airport_uz = Column(String(255), nullable=True)
+    code = Column(String(3), nullable=True)
     city_id = Column(Integer, ForeignKey("cities.id"), nullable=False)
 
     city = relationship("City", backref="airports")
@@ -174,13 +175,43 @@ class CurrencyCode(str, Enum):
     UZS = "UZS"
 
 
+class Company(Base):
+    __tablename__ = "companies"
+
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    name = Column(String(255), nullable=False)
+    icon = Column(String(510), nullable=True)
+    code = Column(String(3), nullable=True)
+    description = Column(String(510), nullable=True)
+
+    def __repr__(self):
+        return f"Company(id={self.id}, name={self.name})"
+
+
+class FlightGuide(Base):
+    __tablename__ = "flight_guides"
+
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), nullable=False)
+    flight_number = Column(String(255), nullable=False)
+    from_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
+    to_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
+    luggage = Column(Integer, default=0)
+
+    company = relationship("Company", backref="flight_guides")
+    from_airport = relationship("Airport", foreign_keys=[from_airport_id])
+    to_airport = relationship("Airport", foreign_keys=[to_airport_id])
+
+    def __repr__(self):
+        return f"FlightGuide(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, \
+               to_airport_id={self.to_airport_id})"
+
+
 class Flight(Base):
     __tablename__ = "flights"
 
     id = Column(Integer, primary_key=True, index=True, unique=True)
-    flight_number = Column(String(255), nullable=False)
-    from_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
-    to_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
+    flight_guide_id = Column(Integer, ForeignKey("flight_guides.id"), nullable=False)
     departure_date = Column(DateTime, nullable=False)
     arrival_date = Column(DateTime, nullable=False)
     price = Column(Integer, default=0)
@@ -193,13 +224,11 @@ class Flight(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
 
-    from_airport = relationship("Airport", foreign_keys=[from_airport_id])
-    to_airport = relationship("Airport", foreign_keys=[to_airport_id])
+    flight_guide = relationship("FlightGuide", backref="flights")
     actor = relationship("User", backref="flights")
 
     def __repr__(self):
-        return f"Flight(id={self.id}, flight_number={self.flight_number}, from_airport_id={self.from_airport_id}, " \
-               f"to_airport_id={self.to_airport_id}, departure_date={self.departure_date}, " \
+        return f"Flight(id={self.id}, flight_number={self.flight_number}, departure_date={self.departure_date}, " \
                f"arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, " \
                f"total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, " \
                f"actor_id={self.actor_id})"
@@ -345,7 +374,7 @@ class Ticket(Base):
     discount_id = Column(Integer, ForeignKey('discounts.id'), nullable=True)
     comment = Column(String(255), nullable=True)
     taking_amount = Column(Integer, default=0)  # Сумма, которую берет агент/кассир/бронзировщик за бронирование
-    luggage = Column(Integer, default=0)
+    luggage = Column(Boolean, default=False)
     platform = Column(Enum('web', 'ios', 'android', name='Platform'), default='web')
     status_id = Column(Integer, ForeignKey('ticket_statuses.id'), nullable=False)
     actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)

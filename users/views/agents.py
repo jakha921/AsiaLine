@@ -13,13 +13,10 @@ class Agent:
     def get_list(page: Optional[int],
                  limit: Optional[int],
                  db: Session, ):
+        query = db.query(models.Agent).filter(models.Agent.block_date == None)
         if page and limit:
-            query = db.query(models.Agent). \
-                filter(models.Agent.block_date == None)
-
-            if page and limit:
-                return query.offset(limit * (page - 1)).limit(limit).all()
-            return query.all()
+            return query.offset(limit * (page - 1)).limit(limit).all()
+        return query.all()
 
     @staticmethod
     def get_by_id(db: Session, agent_id: int):
