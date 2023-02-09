@@ -8,17 +8,17 @@ class CountryCreate(BaseModel):
     country_uz: Optional[str]
     code: Optional[str]
 
-    @validator('code')
-    def code_must_be_upper(cls, v):
-        if v != v.upper():
-            raise ValueError('code must be upper')
-        return v
+    # @validator('code')
+    # def code_must_be_upper(cls, v):
+    #     if v != v.upper():
+    #         raise ValueError('code must be upper')
+    #     return v
 
-    @validator('code')
-    def code_must_be_3_characters(cls, v):
-        if len(v) != 3:
-            raise ValueError('code must be 3 characters')
-        return v
+    # @validator('code')
+    # def code_must_be_3_characters(cls, v):
+    #     if len(v) != 3:
+    #         raise ValueError('code must be 3 characters')
+    #     return v
 
     class Config:
         schema_extra = {

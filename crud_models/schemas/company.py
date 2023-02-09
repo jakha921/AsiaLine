@@ -9,11 +9,11 @@ class CompanyCreate(BaseModel):
     description: Optional[str]
 
     # region Validators
-    @validator('code')
-    def code_must_be_less_than_3_characters(cls, v):
-        if len(v) > 3:
-            raise ValueError('code must be less than 3 characters')
-        return v
+    # @validator('code')
+    # def code_must_be_less_than_3_characters(cls, v):
+    #     if len(v) > 3:
+    #         raise ValueError('code must be less than 3 characters')
+    #     return v
 
     # endregion
 
