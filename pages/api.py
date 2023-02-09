@@ -57,13 +57,15 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                         'id', a1.id, \
                         'airport_ru', a1.airport_ru, \
                         'airport_en', a1.airport_en, \
-                        'airport_uz', a1.airport_uz \
+                        'airport_uz', a1.airport_uz, \
+                        'code', a1.code \
                         ) AS from_airport, \
                     json_build_object( \
                         'id', a2.id, \
                         'airport_ru', a2.airport_ru, \
                         'airport_en', a2.airport_en, \
-                        'airport_uz', a2.airport_uz \
+                        'airport_uz', a2.airport_uz, \
+                        'code', a2.code \
                     ) AS to_airport, \
                     f.total_seats, f.left_seats, f.on_sale "
 
@@ -236,7 +238,7 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
             query += f"AND (f.price = {search_text} \
                         OR f.left_seats = {search_text}) "
 
-        query += f"GROUP BY f.id "
+        query += f"GROUP BY f.id, fg.flight_number "
 
         query += f"ORDER BY f.departure_date "
         if page and limit:
