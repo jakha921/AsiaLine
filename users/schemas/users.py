@@ -1,7 +1,10 @@
 from datetime import datetime
+import re
 
 from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional
+
+# EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9.+/=?_-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$")
 
 
 class UserCreate(BaseModel):
