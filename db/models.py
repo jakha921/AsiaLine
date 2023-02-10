@@ -199,7 +199,7 @@ class FlightGuide(Base):
     from_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
     to_airport_id = Column(Integer, ForeignKey("airports.id"), nullable=False)
     luggage = Column(Integer, default=0)
-    luggage_weight = Column(Integer, default=0, nullable=True)
+    baggage_weight = Column(Integer, default=0, nullable=True)
 
     company = relationship("Company", backref="flight_guides")
     from_airport = relationship("Airport", foreign_keys=[from_airport_id])
