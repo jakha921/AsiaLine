@@ -119,25 +119,74 @@ class Ticket:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble creating")
 
     @staticmethod
-    def update(db: Session, db_ticket: models.Ticket, ticket: schemas.TicketUpdate, flight):
-        if db_ticket.luggage != ticket.luggage:
-            luggage_price = db.query(models.FlightGuide, models.Agent).\
-                join(models.Agent, models.Agent.id == db_ticket.agent_id).\
-                filter(models.FlightGuide.id == flight.flight_guide_id).first()
+    def update(db: Session,
+               db_ticket: models.Ticket,
+               ticket: schemas.TicketUpdate,
+               db_flight: models.Flight,
+               user_id: int,
+               hard: bool = False,
+               soft: bool = False):
+        try:
+            if db_ticket.luggage != ticket.luggage or hard or soft:
+                query = db.query(models.FlightGuide.luggage, models.Agent.balance, models.Booking). \
+                    filter(models.FlightGuide.id == db_flight.flight_guide_id,
+                           models.Agent.id == db_ticket.agent_id,
+                           models.Booking.agent_id == db_ticket.agent_id,
+                           models.Booking.flight_id == db_flight.id).first()
 
-            if not db_ticket.luggage and ticket.luggage:
-                db_ticket.price += luggage_price[0].luggage
-                luggage_price[1].balance -= luggage_price[0].luggage
+                luggage, balance, booking = query
 
-            if db_ticket.luggage and not ticket.luggage:
-                db_ticket.price -= luggage_price[0].luggage
-                luggage_price[1].balance += luggage_price[0].luggage
+                if hard or soft:
+                    if booking.hard_block - 1 < 0 or booking.soft_block - 1 < 0:
+                        raise ValueError('Agent has not enough block')
+                    if hard:
+                        booking.hard_block -= 1
+                    if soft:
+                        booking.soft_block -= 1
+                    db_flight.left_seats += 1
 
-        for key, value in ticket.dict().items():
-            if value is not None:
-                setattr(db_ticket, key, value)
-        db.commit()
-        return db_ticket
+                if not db_ticket.luggage and ticket.luggage:
+                    db_ticket.price += luggage
+                    balance -= luggage
+
+                if db_ticket.luggage and not ticket.luggage:
+                    db_ticket.price -= luggage
+                    balance += luggage
+
+            for key, value in ticket.dict().items():
+                if value is not None:
+                    setattr(db_ticket, key, value)
+
+            if hard or soft:
+                db_ticket.is_booked = True
+            else:
+                db_ticket.is_booked = False
+
+            db_ticket.actor_id = user_id
+            db.add(db_ticket)
+
+            if hard or soft and db_ticket.luggage != ticket.luggage:
+                db_agent_debt = models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_flight.id,
+                                                    ticket_id=db_ticket.id,
+                                                    amount=db_ticket.price, type='purchase')
+
+                db.add(db_agent_debt)
+                db.commit()
+                db.refresh(db_agent_debt)
+
+            db.add(db_flight)
+            db.commit()
+            db.refresh(db_flight)
+            return {"message": "Ticket updated successfully"}
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            print(logging.error(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble updating")
+
+
+
+
 
     @staticmethod
     def cancel(db: Session, ticket_cancel: schemas.TicketCancel):

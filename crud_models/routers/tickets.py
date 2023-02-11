@@ -86,14 +86,13 @@ async def create_ticket(ticket: schemas.TicketCreate,
         return Ticket.create(db, ticket, db_flight, get_user_id(jwt), hard, soft)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    # except Exception as e:
-    #     print(logging.error(e))
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
 
 
 @routers.patch("/ticket/{ticket_id}", tags=["tickets"])
 async def update_ticket(ticket_id: int,
                         ticket: schemas.TicketUpdate,
+                        hard: bool = False,
+                        soft: bool = False,
                         jwt: dict = Depends(JWTBearer()),
                         db: Session = Depends(get_db)):
     """
@@ -109,6 +108,8 @@ async def update_ticket(ticket_id: int,
 
     try:
         db_ticket = Ticket.get_by_id(db, ticket_id)
+        if db_ticket.is_booked:
+            raise ValueError("Ticket is booked you cannot change this ticket")
         if db_ticket is None or db_ticket.deleted_at is not None:
             raise ValueError("Ticket not found")
         db_flight = Flight.get_by_id(db, ticket.flight_id)
@@ -117,12 +118,9 @@ async def update_ticket(ticket_id: int,
             raise ValueError("Flight not found")
         if db_ticket.agent_id != ticket.agent_id:
             raise ValueError("Agent cannot be changed")
-        return Ticket.update(db, db_ticket, ticket, db_flight)
+        return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), hard, soft)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        print(logging.error(e))
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
 @routers.post("/ticket/cancellation", tags=["tickets"])

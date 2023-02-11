@@ -116,8 +116,8 @@ async def update_booking(booking_id: int,
         if db_flight is None or db_flight.deleted_at is not None or db_flight.departure_date < datetime.now():
             raise ValueError("Flight not found")
 
-        if Booking.get_by_flight_id_and_agent_id(db, booking.flight_id, booking.agent_id):
-            raise ValueError("Booking already exists")
+        # if Booking.get_by_flight_id_and_agent_id(db, booking.flight_id, booking.agent_id):
+        #     raise ValueError("Booking already exists")
 
         return Booking.update(db, booking, db_booking, db_flight)
     except ValueError as e:

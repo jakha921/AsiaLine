@@ -175,7 +175,7 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
                     AND f.on_sale >= '{datetime.now()}' "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (f.flight_number LIKE '%{search_text}%' \
+            query += f"AND (fg.flight_number LIKE '%{search_text}%' \
                        OR a1.airport_ru LIKE '%{search_text}%' \
                        OR a1.airport_en LIKE '%{search_text}%' \
                        OR a1.airport_uz LIKE '%{search_text}%' \
