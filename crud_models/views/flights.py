@@ -82,18 +82,6 @@ class Flight:
     def delete(db: Session, flight: models.Flight):
         """ get all bookings and tickets of this flight and delete them """
         try:
-            db_ticket = db.query(models.Ticket).filter(models.Ticket.flight_id == flight.id).all()
-            db_booking = db.query(models.Booking).filter(models.Booking.flight_id == flight.id).all()
-
-            for ticket in db_ticket:
-                ticket_schema = TicketCancel(
-                    ticket_id=ticket.id,
-                    fine=0,
-                    currency='RUB',
-                )
-                Ticket.cancel(db, ticket_schema)
-            for booking in db_booking:
-                Booking.delete(db, booking.id)
             flight.deleted_at = datetime.now()
             db.commit()
             return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}

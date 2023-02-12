@@ -212,6 +212,8 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
                             'booking_id', b.id, \
                             'hard_block', b.hard_block, \
                             'soft_block', b.soft_block, \
+                            'price', b.price, \
+                            'currency', b.currency, \
                             'agent_id', a.id, \
                             'company_name', a.company_name) \
                     ) AS bookings \

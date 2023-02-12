@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 
 from crud_models.views.flights import Flight, FlightPriceHistory
+from db import models
 from db.database import get_db
 from crud_models.schemas import flights as schemas
 from auth.auth_token.auth_bearer import JWTBearer
@@ -149,6 +150,10 @@ async def delete_flight(flight_id: int,
         db_flight = Flight.get_by_id(db, flight_id)
         if db_flight is None or db_flight.deleted_at is not None:
             raise ValueError("Flight not found")
+        if db_ticket := db.query(models.Ticket).filter(models.Ticket.flight_id == db_flight.id).all():
+            raise ValueError(f"Flight has {len(db_ticket)} tickets")
+        if db_booking := db.query(models.Booking).filter(models.Booking.flight_id == db_flight.id).all():
+            raise ValueError(f"Flight has {len(db_booking)} bookings")
         return Flight.delete(db, db_flight)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

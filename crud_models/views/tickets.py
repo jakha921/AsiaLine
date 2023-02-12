@@ -3,7 +3,7 @@ import random
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from db import models
@@ -119,6 +119,34 @@ class Ticket:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble creating")
 
     @staticmethod
+    def cancel(db: Session, ticket_cancel: schemas.TicketCancel):
+        db_ticket = db.query(
+            models.Ticket, models.Agent, models.Flight). \
+            filter(
+            models.Ticket.id == ticket_cancel.ticket_id,
+            models.Agent.id == models.Ticket.agent_id,
+            models.Flight.id == models.Ticket.flight_id).first()
+
+        ticket = db_ticket['Ticket']
+        agent = db_ticket['Agent']
+        flight = db_ticket['Flight']
+
+        ticket.deleted_at = datetime.now()
+        agent.balance -= ticket_cancel.fine
+        agent.balance += ticket.price
+        flight.left_seats += 1
+
+        db.commit()
+
+        db_agent_debt = models.AgentDebt(agent_id=agent.id, flight_id=flight.id, ticket_id=ticket.id,
+                                         amount=ticket_cancel.fine, type='fine')
+        db.add(db_agent_debt)
+        db.commit()
+        db.refresh(db_agent_debt)
+
+        return {"message": "Ticket deleted successfully and fine added to agent balance"}
+
+    @staticmethod
     def update(db: Session,
                db_ticket: models.Ticket,
                ticket: schemas.TicketUpdate,
@@ -127,6 +155,16 @@ class Ticket:
                hard: bool = False,
                soft: bool = False):
         try:
+            if db_ticket.agent_id != ticket.agent_id:
+                Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency))
+
+                # create ticket with new agent id and delete old ticket
+                for key, value in ticket.dict().items():
+                    if value is not None:
+                        setattr(db_ticket, key, value)
+                # ticket_create = schemas.TicketCreate(**db_ticket.__dict__)
+                # Ticket.create(db, ticket_create, db_flight, user_id, hard, soft)
+
             if db_ticket.luggage != ticket.luggage or hard or soft:
                 query = db.query(models.FlightGuide.luggage, models.Agent.balance, models.Booking). \
                     filter(models.FlightGuide.id == db_flight.flight_guide_id,
@@ -167,8 +205,8 @@ class Ticket:
 
             if hard or soft and db_ticket.luggage != ticket.luggage:
                 db_agent_debt = models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_flight.id,
-                                                    ticket_id=db_ticket.id,
-                                                    amount=db_ticket.price, type='purchase')
+                                                 ticket_id=db_ticket.id,
+                                                 amount=db_ticket.price, type='purchase')
 
                 db.add(db_agent_debt)
                 db.commit()
@@ -184,34 +222,3 @@ class Ticket:
             print(logging.error(e))
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble updating")
 
-
-
-
-
-    @staticmethod
-    def cancel(db: Session, ticket_cancel: schemas.TicketCancel):
-        db_ticket = db.query(
-            models.Ticket, models.Agent, models.Flight). \
-            filter(
-            models.Ticket.id == ticket_cancel.ticket_id,
-            models.Agent.id == models.Ticket.agent_id,
-            models.Flight.id == models.Ticket.flight_id).first()
-
-        ticket = db_ticket['Ticket']
-        agent = db_ticket['Agent']
-        flight = db_ticket['Flight']
-
-        ticket.deleted_at = datetime.now()
-        agent.balance -= ticket_cancel.fine
-        agent.balance += ticket.price
-        flight.left_seats += 1
-
-        db.commit()
-
-        db_agent_debt = models.AgentDebt(agent_id=agent.id, flight_id=flight.id, ticket_id=ticket.id,
-                                         amount=ticket_cancel.fine, type='fine')
-        db.add(db_agent_debt)
-        db.commit()
-        db.refresh(db_agent_debt)
-
-        return {"message": "Ticket deleted successfully and fine added to agent balance"}

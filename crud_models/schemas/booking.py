@@ -45,6 +45,8 @@ class Booking(BookingUpdate):
     agent_id: Optional[int]
     hard_block: Optional[int]
     soft_block: Optional[int]
+    price: Optional[int]
+    currency: Optional[str]
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
     deleted_at: Optional[datetime]
