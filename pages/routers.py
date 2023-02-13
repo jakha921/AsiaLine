@@ -176,10 +176,10 @@ async def get_tickets(db: Session = Depends(get_db),
         db_tickets = api.get_tickets_by_departure_date_and_on_sale(db, from_date=from_date, to_date=to_date, page=page,
                                                                    limit=limit, search_text=searching_text,
                                                                    agent_id=agent_id)
-        currency_rate = api.get_currency_last_item(db)
+        # currency_rate = api.get_currency_last_item(db)
 
         result = {
-            'currency': sort.sort_currency_rate(currency_rate),
+            # 'currency': sort.sort_currency_rate(currency_rate),
             'tickets_count': len(api.get_tickets_by_departure_date_and_on_sale(db, from_date=from_date, to_date=to_date,
                                                                                agent_id=agent_id,
                                                                                search_text=searching_text)),

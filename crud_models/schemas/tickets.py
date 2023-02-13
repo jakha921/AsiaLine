@@ -18,7 +18,7 @@ class TicketCreate(BaseModel):
     agent_id: int
     comment: Optional[str]
     luggage: bool
-    status_id: int = 1
+    status_id: int = 5
     platform: Platform = Platform.WEB
 
     # region Validators

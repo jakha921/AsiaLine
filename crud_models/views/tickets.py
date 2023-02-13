@@ -1,3 +1,4 @@
+import copy
 import logging
 import random
 from typing import Optional
@@ -132,6 +133,7 @@ class Ticket:
         flight = db_ticket['Flight']
 
         ticket.deleted_at = datetime.now()
+        ticket.status_id = 3
         agent.balance -= ticket_cancel.fine
         agent.balance += ticket.price
         flight.left_seats += 1
@@ -156,21 +158,27 @@ class Ticket:
                soft: bool = False):
         try:
             if db_ticket.agent_id != ticket.agent_id:
-                Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency))
+                new_ticket = models.Ticket()
 
-                # create ticket with new agent id and delete old ticket
+                for key, value in db_ticket.__dict__.items():
+                    if value is not None:
+                        setattr(new_ticket, key, value)
+
                 for key, value in ticket.dict().items():
                     if value is not None:
-                        setattr(db_ticket, key, value)
-                # ticket_create = schemas.TicketCreate(**db_ticket.__dict__)
-                # Ticket.create(db, ticket_create, db_flight, user_id, hard, soft)
+                        setattr(new_ticket, key, value)
+                new_ticket.actor_id = user_id
+
+                # create a new ticket and cancel old ticket
+                Ticket.create(db, schemas.TicketCreate(**new_ticket.__dict__), db_flight, user_id, hard, soft)
+                Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency))
 
             if db_ticket.luggage != ticket.luggage or hard or soft:
                 query = db.query(models.FlightGuide.luggage, models.Agent.balance, models.Booking). \
-                    filter(models.FlightGuide.id == db_flight.flight_guide_id,
-                           models.Agent.id == db_ticket.agent_id,
-                           models.Booking.agent_id == db_ticket.agent_id,
-                           models.Booking.flight_id == db_flight.id).first()
+                    join(models.FlightGuide, models.FlightGuide.id == db_flight.flight_guide_id). \
+                    join(models.Agent, models.Agent.id == db_ticket.agent_id). \
+                    join(models.Booking, models.Booking.id == db_ticket.booking_id). \
+                    filter(models.Booking.agent_id == db_ticket.agent_id).first()
 
                 luggage, balance, booking = query
 
@@ -221,4 +229,3 @@ class Ticket:
         except Exception as e:
             print(logging.error(e))
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble updating")
-

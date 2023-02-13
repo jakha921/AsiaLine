@@ -13,7 +13,10 @@ routers = APIRouter()
 
 def add_time(from_date, to_date):
     """ To exist date add min and max time """
-    from_date = datetime.combine(from_date, datetime.now().time())
+    if from_date == datetime.now().date():
+        from_date = datetime.combine(from_date, datetime.now().time())
+    else:
+        from_date = datetime.combine(from_date, datetime.min.time())
     to_date = datetime.combine(to_date, datetime.max.time())
     return from_date, to_date
 
@@ -270,12 +273,19 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
                         ) AS flight, \
                         CONCAT(t.first_name, t.surname) AS passenger, \
                         u.username AS agent, \
-                        t.comment, t.is_booked  \
+                        t.comment, t.is_booked, \
+                        json_build_object( \
+                            'id', ts.id, \
+                            'name_ru', ts.name_ru, \
+                            'name_en', ts.name_en, \
+                            'name_uz', ts.name_uz \
+                        ) AS ticket_status \
                     FROM tickets AS t \
                     JOIN flights AS f ON t.flight_id = f.id \
                     JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
                     JOIN agents AS a ON t.agent_id = a.id \
                     JOIN users AS u ON a.user_id = u.id \
+                    JOIN ticket_statuses AS ts ON t.status_id = ts.id \
                     WHERE f.deleted_at IS NULL "
 
         if from_date and to_date:
