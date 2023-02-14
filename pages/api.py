@@ -273,7 +273,7 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
                             'price', f.price, \
                             'currency', f.currency \
                         ) AS flight, \
-                        CONCAT(t.first_name, t.surname) AS passenger, \
+                        CONCAT(t.first_name, ' ', t.surname) AS passenger, \
                         u.username AS agent, \
                         t.comment, t.is_booked, \
                         json_build_object( \
