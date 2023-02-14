@@ -100,13 +100,14 @@ def get_flights_by_range_departure_date(db: Session, from_date, to_date, page=No
                AND f.on_sale <= '{datetime.now()}' "
 
     if search_text and not search_text.isdigit():
-        query += f"AND (fg.flight_number LIKE '%{search_text}%' \
-                OR a1.airport_ru LIKE '%{search_text}%' \
-                OR a1.airport_en LIKE '%{search_text}%' \
-                OR a1.airport_uz LIKE '%{search_text}%' \
-                OR a2.airport_ru LIKE '%{search_text}%' \
-                OR a2.airport_en LIKE '%{search_text}%' \
-                OR a2.airport_uz LIKE '%{search_text}%') "
+        search_text = search_text.lower()
+        query += f"AND (LOWER(fg.flight_number) LIKE '%{search_text}%' \
+                OR LOWER(a1.airport_ru) LIKE '%{search_text}%' \
+                OR LOWER(a1.airport_en) LIKE '%{search_text}%' \
+                OR LOWER(a1.airport_uz) LIKE '%{search_text}%' \
+                OR LOWER(a2.airport_ru) LIKE '%{search_text}%' \
+                OR LOWER(a2.airport_en) LIKE '%{search_text}%' \
+                OR LOWER(a2.airport_uz) LIKE '%{search_text}%') "
 
     if search_text and search_text.isdigit():
         query += f"AND (f.price={search_text} \
@@ -178,13 +179,13 @@ def get_flights_by_on_sale_date_and_search(db: Session, from_date, to_date, page
                     AND f.on_sale >= '{datetime.now()}' "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (fg.flight_number LIKE '%{search_text}%' \
-                       OR a1.airport_ru LIKE '%{search_text}%' \
-                       OR a1.airport_en LIKE '%{search_text}%' \
-                       OR a1.airport_uz LIKE '%{search_text}%' \
-                       OR a2.airport_ru LIKE '%{search_text}%' \
-                       OR a2.airport_en LIKE '%{search_text}%' \
-                       OR a2.airport_uz LIKE '%{search_text}%') "
+            query += f"AND (LOWER(fg.flight_number) LIKE '%{search_text}%' \
+                       OR LOWER(a1.airport_ru) LIKE '%{search_text}%' \
+                       OR LOWER(a1.airport_en) LIKE '%{search_text}%' \
+                       OR LOWER(a1.airport_uz) LIKE '%{search_text}%' \
+                       OR LOWER(a2.airport_ru) LIKE '%{search_text}%' \
+                       OR LOWER(a2.airport_en) LIKE '%{search_text}%' \
+                       OR LOWER(a2.airport_uz) LIKE '%{search_text}%') "
 
         if search_text and search_text.isdigit():
             query += f"AND (f.price={search_text} \
@@ -236,8 +237,9 @@ def get_quotas_by_flight_id(db, flight_id: int, from_date, to_date, page: int = 
             query += f"AND f.id = {flight_id} "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (fg.flight_number LIKE '%{search_text}%' \
-                       OR a.company_name LIKE '%{search_text}%') "
+            search_text = search_text.lower()
+            query += f"AND (LOWER(fg.flight_number) LIKE '%{search_text}%' \
+                       OR LOWER(a.company_name) LIKE '%{search_text}%') "
 
         if search_text and search_text.isdigit():
             query += f"AND (f.price = {search_text} \
@@ -302,12 +304,14 @@ def get_tickets_by_departure_date_and_on_sale(db: Session, from_date=None, to_da
             query += f"AND t.flight_id = {flight_id} "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (fg.flight_number LIKE '%{search_text}%' \
-                       OR u.username LIKE '%{search_text}%' \
-                       OR t.ticket_number LIKE '%{search_text}%' \
-                       OR t.first_name LIKE '%{search_text}%' \
-                       OR u.username LIKE '%{search_text}%' \
-                       OR t.surname LIKE '%{search_text}%' ) "
+            search_text = search_text.lower()
+            query += f"AND (LOWER(fg.flight_number) LIKE '%{search_text}%' \
+                       OR LOWER(u.username) LIKE '%{search_text}%' \
+                       OR LOWER(t.ticket_number) LIKE '%{search_text}%' \
+                       OR LOWER(t.first_name) LIKE '%{search_text}%' \
+                       OR LOWER(u.username) LIKE '%{search_text}%' \
+                       OR LOWER(t.comment) LIKE '%{search_text}%' \
+                       OR LOWER(t.surname) LIKE '%{search_text}%' ) "
 
         if search_text and search_text.isdigit():
             query += f"AND f.price = {search_text} "
@@ -407,9 +411,10 @@ def get_refill_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=
             query += f"AND r.agent_id = {agent_id} "
 
         if search_text and not search_text.isdigit():
-            query += f"AND (r.comment LIKE '%{search_text}%' \
-                            OR u.username LIKE '%{search_text}%' \
-                            OR a.company_name LIKE '%{search_text}%') "
+            search_text = search_text.lower()
+            query += f"AND (LOWER(r.comment) LIKE '%{search_text}%' \
+                            OR LOWER(u.username) LIKE '%{search_text}%' \
+                            OR LOWER(a.company_name) LIKE '%{search_text}%') "
 
         if search_text and search_text.isdigit():
             query += f"AND (r.amount = {search_text}) "
