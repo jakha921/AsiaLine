@@ -22,6 +22,18 @@ class BookingCreate(BaseModel):
             raise ValueError('agent_id must be greater than 0')
         return v
 
+    @validator('hard_block')
+    def hard_block_can_not_be_negative(cls, v):
+        if v < 0:
+            raise ValueError('hard_block can not be negative')
+        return v
+
+    @validator('soft_block')
+    def soft_block_can_not_be_negative(cls, v):
+        if v < 0:
+            raise ValueError('soft_block can not be negative')
+        return v
+
     # endregion
 
     class Config:

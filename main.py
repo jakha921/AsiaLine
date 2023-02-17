@@ -25,7 +25,13 @@ from users.routers.role_permissions import routers as role_permissions
 from users.routers.agents import routers as agents
 from users.routers.discounts import routers as discounts
 
-from pages.routers import routers as logics_router
+from pages.routers.routers import routers as logics_router
+from pages.routers.currency import routers as currency
+from pages.routers.main import routers as main
+from pages.routers.flights import routers as flights_page
+from pages.routers.tickets import routers as tickets_page
+
+
 from db.database import SessionLocal
 
 app = FastAPI()
@@ -66,8 +72,8 @@ app.include_router(permissions)
 app.include_router(role_permissions)
 app.include_router(discounts)
 app.include_router(agents)
-
-# CRUDs
+#
+# # CRUDs
 app.include_router(countries)
 app.include_router(cities)
 app.include_router(airports)
@@ -81,9 +87,12 @@ app.include_router(genders)
 app.include_router(refills)
 app.include_router(ticket_classes)
 
-
 # pages
 app.include_router(logics_router, prefix="", tags=["pages"])
+app.include_router(currency)
+app.include_router(main)
+app.include_router(flights_page, tags=["pages"])
+app.include_router(tickets_page, tags=["pages"])
 
 if __name__ == "__main__":
     import uvicorn
