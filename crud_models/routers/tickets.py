@@ -46,7 +46,7 @@ async def get_ticket(ticket_id: int,
         db_ticket = Ticket.get_by_id(db, ticket_id)
         if db_ticket is None:
             raise ValueError("Ticket not found")
-        return schemas.Ticket.from_orm(db_ticket)
+        return db_ticket
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -114,8 +114,8 @@ async def update_ticket(ticket_id: int,
         if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
                 db_flight.departure_date < datetime.now():
             raise ValueError("Flight not found")
-        # if db_ticket.agent_id != ticket.agent_id:
-        #     raise ValueError("Agent cannot be changed")
+        if db_ticket is None or db_ticket.deleted_at is not None or db_flight.departure_date < datetime.now():
+            raise ValueError("Ticket not found")
         return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), hard, soft)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
