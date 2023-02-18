@@ -56,7 +56,7 @@ def get_flights_by_range_date(db: Session,
 
     if search_text:
         search_text = search_text.lower()
-        query += f"AND (fg.flight_number::text LIKE '%{search_text}%' \
+        query += f"AND (LOWER(fg.flight_number) LIKE '%{search_text}%' \
                     OR LOWER(a1.airport_ru) LIKE '%{search_text}%' \
                     OR LOWER(a1.airport_en) LIKE '%{search_text}%' \
                     OR LOWER(a1.airport_uz) LIKE '%{search_text}%' \

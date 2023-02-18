@@ -28,7 +28,45 @@ class Ticket:
 
     @staticmethod
     def get_by_id(db: Session, ticket_id: int):
-        return db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+        query = db.execute(
+            f"SELECT \
+                t.id, t.first_name, t.surname, t.middle_name, \
+                t.passport, t.dob, t.price, t.is_booked, t.comment, \
+                json_build_object( \
+                    'id', country.id, \
+                    'name_ru', country.country_ru, \
+                    'name_en', country.country_en, \
+                    'name_uz', country.country_uz \
+                ) AS citizenship, \
+                json_build_object( \
+                    'id', g.id, \
+                    'gender_ru', g.gender_ru, \
+                    'gender_en', g.gender_en, \
+                    'gender_uz', g.gender_uz \
+                ) AS gender, \
+                json_build_object( \
+                    'id', class.id, \
+                    'name_ru', class.name_ru, \
+                    'name_en', class.name_en, \
+                    'name_uz', class.name_uz \
+                ) AS class, \
+                json_build_object( \
+                    'id', status.id, \
+                    'name_ru', status.name_ru, \
+                    'name_en', status.name_en, \
+                    'name_uz', status.name_uz \
+                ) AS status, \
+                t.created_at, t.updated_at, t.deleted_at \
+            FROM tickets t \
+            LEFT JOIN countries country ON country.id = t.citizenship \
+            LEFT JOIN genders g on t.gender_id = g.id \
+            LEFT JOIN ticket_classes class on t.class_id = class.id \
+            LEFT JOIN ticket_statuses status on t.status_id = status.id \
+            LEFT JOIN flights f on t.flight_id = f.id \
+            WHERE t.id = {ticket_id} "
+        )
+
+        return query.first()
 
     @staticmethod
     def create(db: Session, ticket: schemas.TicketCreate, db_flight: models.Flight, user_id: int, hard: bool = False,
@@ -141,7 +179,7 @@ class Ticket:
         db.commit()
 
         db_agent_debt = models.AgentDebt(agent_id=agent.id, flight_id=flight.id, ticket_id=ticket.id,
-                                         amount=ticket_cancel.fine, type='fine')
+                                         amount=ticket_cancel.fine, type='fine', comment=ticket_cancel.comment)
         db.add(db_agent_debt)
         db.commit()
         db.refresh(db_agent_debt)
@@ -171,7 +209,8 @@ class Ticket:
 
                 # create a new ticket and cancel old ticket
                 Ticket.create(db, schemas.TicketCreate(**new_ticket.__dict__), db_flight, user_id, hard, soft)
-                Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency))
+                Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency,
+                                                       comment='Ticket was created wrong'))
 
             if db_ticket.luggage != ticket.luggage or hard or soft:
                 query = db.query(models.FlightGuide.luggage, models.Agent.balance, models.Booking). \

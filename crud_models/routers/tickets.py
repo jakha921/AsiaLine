@@ -110,8 +110,6 @@ async def update_ticket(ticket_id: int,
         db_ticket = Ticket.get_by_id(db, ticket_id)
         if db_ticket.is_booked:
             raise ValueError("Ticket is booked you cannot change this ticket")
-        if db_ticket is None or db_ticket.deleted_at is not None:
-            raise ValueError("Ticket not found")
         db_flight = Flight.get_by_id(db, ticket.flight_id)
         if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
                 db_flight.departure_date < datetime.now():

@@ -153,6 +153,7 @@ class TicketCancel(BaseModel):
     ticket_id: int
     fine: int
     currency: str
+    comment: Optional[str]
 
     @validator('currency')
     def currency_must_be_in_list(cls, v):
@@ -166,6 +167,7 @@ class TicketCancel(BaseModel):
                 "ticket_id": 1,
                 "fine": 1000,
                 "currency": "RUB",
+                "comment": "Not required (type: str)",
             }
         }
 

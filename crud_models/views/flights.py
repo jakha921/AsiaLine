@@ -1,8 +1,9 @@
 from typing import Optional
 from fastapi import HTTPException, status
+from sqlalchemy import between
 
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, date
 import logging
 
 from crud_models.schemas.tickets import TicketCancel
@@ -59,6 +60,15 @@ class Flight:
             models.Flight.id == flight_id,
             models.Flight.deleted_at == None,
             models.Flight.departure_date >= datetime.now()).first()
+
+    @staticmethod
+    def is_flight_exist_today(db: Session, flight_guide_id: int, departure_date: date):
+        min_date = datetime.combine(departure_date, datetime.min.time())
+        max_date = datetime.combine(departure_date, datetime.max.time())
+        return db.query(models.Flight). \
+            filter(
+            models.Flight.flight_guide_id == flight_guide_id,
+            between(models.Flight.departure_date, min_date, max_date)).first()
 
     @staticmethod
     def create(db: Session, flight: schemas.FlightCreate, user_id: int):

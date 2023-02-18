@@ -35,18 +35,19 @@ def get_tickets_by_flight(db: Session, from_date=None, to_date=None,
                             'name_en', ts.name_en, \
                             'name_uz', ts.name_uz \
                         ) AS ticket_status, \
-                        COALESCE( \
-                            json_build_object( \
-                                'id', ad.id, \
-                                'amount', ad.amount, \
-                                'comment', ad.comment), '[]') AS agent_debt \
+                        json_build_object( \
+                            'id', ad.id, \
+                            'amount', ad.amount, \
+                            'comment', ad.comment) AS agent_debt \
                     FROM tickets AS t \
                     JOIN flights AS f ON t.flight_id = f.id \
                     JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
                     JOIN agents AS a ON t.agent_id = a.id \
                     JOIN users AS u ON a.user_id = u.id \
                     JOIN ticket_statuses AS ts ON t.status_id = ts.id \
-                    LEFT JOIN agent_debts AS ad ON t.id = ad.ticket_id \
+                    JOIN agent_debts AS ad ON t.id = ad.ticket_id AND ad.id = ( \
+                        SELECT id FROM agent_debts WHERE ticket_id = t.id ORDER BY id DESC LIMIT 1 \
+                    ) \
                     WHERE f.deleted_at IS NULL "
 
         if from_date and to_date:
@@ -66,7 +67,8 @@ def get_tickets_by_flight(db: Session, from_date=None, to_date=None,
         if search_text:
             search_text = search_text.lower()
             query += f"AND (fg.flight_number::text LIKE '%{search_text}%' \
-                          OR LOWER(t.first_name) LIKE '%{search_text}%' \
+                            OR LOWER(fg.flight_number) LIKE '%{search_text}%' \
+                            OR LOWER(t.first_name) LIKE '%{search_text}%' \
                             OR LOWER(t.surname) LIKE '%{search_text}%' \
                             OR t.ticket_number::text LIKE '%{search_text}%' \
                             OR LOWER(u.username) LIKE '%{search_text}%' \

@@ -70,6 +70,9 @@ async def create_flight(flight: schemas.FlightCreate,
     if not check_permissions("create_flight", jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     try:
+        # check flight.flight_guide_id and departure_date is same return error
+        if Flight.is_flight_exist_today(db, flight.flight_guide_id, flight.departure_date):
+            raise ValueError("This flight is already exists today")
         create = Flight.create(db, flight, get_user_id(jwt))
         if flight.price > 0:
             FlightPriceHistory.create(db, flight.price, create.id)
