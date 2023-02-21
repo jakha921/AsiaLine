@@ -13,6 +13,7 @@ class TicketCreate(BaseModel):
     dob: date
     gender_id: int
     passport: str
+    passport_expires: Optional[date]
     citizenship: int
     class_id: int
     agent_id: int
@@ -82,6 +83,12 @@ class TicketCreate(BaseModel):
             raise ValueError('platform must be in list')
         return v
 
+    @validator('passport_expires')
+    def passport_expires_must_be_gt_than_now(cls, v):
+        if v < datetime.now().date():
+            raise ValueError('passport_expires must be greater than now')
+        return v
+
     # endregion
 
     class Config:
@@ -94,6 +101,7 @@ class TicketCreate(BaseModel):
                 "dob": "1990-01-01",
                 "gender_id": 1,
                 "passport": "AA1234567",
+                "passport_expires": "2025-01-01",
                 "citizenship": 1,
                 "class_id": 1,
                 "agent_id": 1,
@@ -112,6 +120,7 @@ class TicketUpdate(TicketCreate):
     dob: Optional[date]
     gender_id: Optional[int]
     passport: Optional[str]
+    passport_expires: Optional[date]
     citizenship: Optional[int]
     class_id: Optional[int]
     status_id: Optional[int]
@@ -170,116 +179,3 @@ class TicketCancel(BaseModel):
                 "comment": "Not required (type: str)",
             }
         }
-
-# region Ticket
-# class TicketBase(BaseModel):
-#     flight_id: int
-#     first_name: str
-#     surname: str
-#     dob: date
-#     gender_id: Optional[int]
-#     passport: str
-#     citizenship: Optional[int]
-#     class_id: Optional[int]
-#     price: int
-#     currency: str = CurrencyCode.RUB
-#     taking_amount: int
-#     status_id: Optional[int] = None
-#
-#     class Config:
-#         orm_mode = True
-#
-#     # region Validation
-#     @validator('flight_id')
-#     def flight_id_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('flight_id must be greater than 0')
-#         return v
-#
-#     @validator('first_name')
-#     def first_name_must_be_3_characters(cls, v):
-#         if len(v) < 2:
-#             raise ValueError('first_name must be more than 2 characters')
-#         return v
-#
-#     @validator('surname')
-#     def surname_must_be_2_characters(cls, v):
-#         if len(v) < 2:
-#             raise ValueError('surname must be more than 2 characters')
-#         return v
-#
-#     @validator('gender_id')
-#     def gender_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('gender_id must be more than 0 characters')
-#         return v
-#
-#     @validator('citizenship')
-#     def citizenship_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('citizenship must be more than 0 characters')
-#         return v
-#
-#     @validator('class_id')
-#     def class_id_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('class_id must be more than 0 characters')
-#         return v
-#
-#     @validator('status_id')
-#     def status_id_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('status_id must be more than 0 characters')
-#         return v
-#
-#     @validator('dob')
-#     def dob_must_be_low_than_now(cls, v):
-#         if v > datetime.now().date():
-#             raise ValueError('dob must be low than now')
-#         return v
-#
-#     # region Validation
-#
-#
-# class TicketCreate(TicketBase):
-#     agent_id: Optional[int]
-#     passenger_id: Optional[int]
-#     middle_name: Optional[str]
-#     discount_id: Optional[int]
-#     comment: Optional[str]
-#     luggage: Optional[int]
-#     actor_id: Optional[int]
-#     platform: str = Platform.WEB
-#
-#     @validator('passenger_id')
-#     def passenger_id_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('passenger_id must be greater than 0')
-#         return v
-#
-#     @validator('discount_id')
-#     def discount_id_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('discount_id must be greater than 0')
-#         return v
-#
-#     @validator('actor_id')
-#     def actor_id_must_be_gt_than_0(cls, v):
-#         if v < 1:
-#             raise ValueError('actor_id must be greater than 0')
-#         return v
-#
-#
-# class TicketUpdate(TicketCreate):
-#     pass
-#
-#
-# class Ticket(TicketBase):
-#     id: int
-#     platform: str = Platform.WEB
-#
-#     class Config:
-#         orm_mode = True
-
-
-# endregion
