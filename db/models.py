@@ -47,6 +47,44 @@ class User(Base):
         return f"User(id={self.id}, email={self.email}, username={self.username}, role_id={self.role_id})"
 
 
+class UserHistory(Base):
+    __tablename__ = "user_history"
+
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(
+        Enum(
+            "flight_create",
+            "flight_update",
+            "flight_delete",
+            "ticket_create",
+            "ticket_update",
+            "ticket_delete",
+            "booking_create",
+            "booking_update",
+            "booking_delete",
+            "user_create",
+            "user_update",
+            "user_delete",
+            "agent_create",
+            "agent_update",
+            "agent_delete",
+            "agent_balance_update",
+            "agent_credit_update",
+            "agent_block",
+            "agent_unblock",
+            name="Action"
+        ), nullable=False
+    )
+    extra_info = Column(String(255), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="user_history")
+
+    def __repr__(self):
+        return f"UserHistory(id={self.id}, user_id={self.user_id}, action={self.action}, date={self.date})"
+
+
 class Discount(Base):
     __tablename__ = "discounts"
 
@@ -221,20 +259,18 @@ class Flight(Base):
     currency = Column(Enum('RUB', 'USD', 'EUR', 'UZS', name='CurrencyCode'), default='RUB')
     total_seats = Column(Integer, default=0)
     left_seats = Column(Integer, default=0)
+    online_seats = Column(Integer, default=0)
     on_sale = Column(DateTime, nullable=True)
-    actor_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
 
     flight_guide = relationship("FlightGuide", backref="flights")
-    actor = relationship("User", backref="flights")
 
     def __repr__(self):
         return f"Flight(id={self.id}, flight_number={self.flight_number}, departure_date={self.departure_date}, " \
                f"arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, " \
-               f"total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale}, " \
-               f"actor_id={self.actor_id})"
+               f"total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale})"
 
 
 class FlightPriceHistory(Base):
@@ -372,6 +408,7 @@ class Ticket(Base):
     dob = Column(Date, nullable=False)
     gender_id = Column(Integer, ForeignKey('genders.id'), nullable=False)
     passport = Column(String(10), nullable=False)
+    passport_expires = Column(Date, nullable=False)
     citizenship = Column(Integer, ForeignKey('countries.id'), nullable=False)
     class_id = Column(Integer, ForeignKey('ticket_classes.id'), nullable=False)
     price = Column(Integer, default=0)
@@ -383,7 +420,6 @@ class Ticket(Base):
     is_booked = Column(Boolean, default=False)
     platform = Column(Enum('web', 'ios', 'android', name='Platform'), default='web')
     status_id = Column(Integer, ForeignKey('ticket_statuses.id'), nullable=False)
-    actor_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True)
@@ -395,7 +431,6 @@ class Ticket(Base):
     class_ = relationship("TicketClass", backref="tickets")
     discount = relationship("Discount", backref="tickets")
     status = relationship("TicketStatus", backref="tickets")
-    actor = relationship("User", backref="tickets")
 
     def __repr__(self):
         return f"Ticket(id={self.id}, flight_id={self.flight_id}, passenger_id={self.passenger_id}), " \

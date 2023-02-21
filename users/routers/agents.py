@@ -54,11 +54,11 @@ async def create_agent(agent: schemas.AgentCreate,
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     try:
-        if Agent.get_by_user_id(db, agent.user_id):
+        if Agent.get_by_email(db, agent.email):
             raise ValueError("This user is already an agent")
         return schemas.Agent.from_orm(Agent.create(db, agent))
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
@@ -76,7 +76,7 @@ async def update_agent(agent_id: int,
         db_agent = Agent.get_by_id(db, agent_id)
         if db_agent is None:
             raise ValueError("Agent not found")
-        if Agent.get_by_user_id(db, agent.user_id):
+        if agent.email and Agent.get_by_email(db, agent.email):
             raise ValueError("This user is already an agent")
         return schemas.Agent.from_orm(Agent.update(db, db_agent, agent))
     except ValueError as e:

@@ -1,11 +1,12 @@
 from datetime import datetime
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, validator, EmailStr
 from typing import Optional
 
 
 class AgentCreate(BaseModel):
-    user_id: int
+    email: EmailStr
+    password: str
     company_name: str
     balance: Optional[float]
     address: Optional[str]
@@ -17,7 +18,8 @@ class AgentCreate(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "user_id": 1,
+                "email": "user@gmail.com",
+                "password": "12345678",
                 "company_name": "Company",
                 "address": "Address",
                 "phone": "+998901234567",
@@ -28,7 +30,8 @@ class AgentCreate(BaseModel):
 
 
 class AgentUpdate(BaseModel):
-    user_id: Optional[int]
+    email: Optional[EmailStr]
+    password: Optional[str]
     company_name: Optional[str]
     balance: Optional[float]
     address: Optional[str]
@@ -40,7 +43,8 @@ class AgentUpdate(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "user_id": 1,
+                "email": "user@gmail.com",
+                "password": "12345678",
                 "company_name": "Company",
                 "balance": 0.0,
                 "address": "Address",
@@ -53,7 +57,8 @@ class AgentUpdate(BaseModel):
 
 class Agent(AgentUpdate):
     id: int
-    user_id: Optional[int]
+    email: Optional[EmailStr]
+    password: Optional[str]
     discount_id: Optional[int]
     block_date: Optional[datetime]
     registered_date: Optional[datetime]

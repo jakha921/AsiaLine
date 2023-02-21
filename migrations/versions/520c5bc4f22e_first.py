@@ -1,8 +1,8 @@
 """first
 
-Revision ID: c4a865b740c7
+Revision ID: 520c5bc4f22e
 Revises: 
-Create Date: 2023-02-10 15:37:06.679490
+Create Date: 2023-02-21 02:11:08.482041
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'c4a865b740c7'
+revision = '520c5bc4f22e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -204,6 +204,16 @@ def upgrade() -> None:
     sa.UniqueConstraint('role_id', 'permission_id', name='_role_permission_uc')
     )
     op.create_index(op.f('ix_role_permissions_id'), 'role_permissions', ['id'], unique=True)
+    op.create_table('user_history',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('action', sa.Enum('flight_create', 'flight_update', 'flight_delete', 'ticket_create', 'ticket_update', 'ticket_delete', 'booking_create', 'booking_update', 'booking_delete', 'user_create', 'user_update', 'user_delete', 'agent_create', 'agent_update', 'agent_delete', 'agent_balance_update', 'agent_credit_update', 'agent_block', 'agent_unblock', name='Action'), nullable=False),
+    sa.Column('extra_info', sa.String(length=255), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_user_history_id'), 'user_history', ['id'], unique=True)
     op.create_table('flight_guides',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('company_id', sa.Integer(), nullable=False),
@@ -242,12 +252,11 @@ def upgrade() -> None:
     sa.Column('currency', sa.Enum('RUB', 'USD', 'EUR', 'UZS', name='CurrencyCode'), nullable=True),
     sa.Column('total_seats', sa.Integer(), nullable=True),
     sa.Column('left_seats', sa.Integer(), nullable=True),
+    sa.Column('online_seats', sa.Integer(), nullable=True),
     sa.Column('on_sale', sa.DateTime(), nullable=True),
-    sa.Column('actor_id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['actor_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['flight_guide_id'], ['flight_guides.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -304,6 +313,7 @@ def upgrade() -> None:
     sa.Column('dob', sa.Date(), nullable=False),
     sa.Column('gender_id', sa.Integer(), nullable=False),
     sa.Column('passport', sa.String(length=10), nullable=False),
+    sa.Column('passport_expires', sa.Date(), nullable=False),
     sa.Column('citizenship', sa.Integer(), nullable=False),
     sa.Column('class_id', sa.Integer(), nullable=False),
     sa.Column('price', sa.Integer(), nullable=True),
@@ -315,11 +325,9 @@ def upgrade() -> None:
     sa.Column('is_booked', sa.Boolean(), nullable=True),
     sa.Column('platform', sa.Enum('web', 'ios', 'android', name='Platform'), nullable=True),
     sa.Column('status_id', sa.Integer(), nullable=False),
-    sa.Column('actor_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('deleted_at', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['actor_id'], ['users.id'], ),
     sa.ForeignKeyConstraint(['agent_id'], ['agents.id'], ),
     sa.ForeignKeyConstraint(['citizenship'], ['countries.id'], ),
     sa.ForeignKeyConstraint(['class_id'], ['ticket_classes.id'], ),
@@ -393,6 +401,8 @@ def downgrade() -> None:
     op.drop_table('refills')
     op.drop_index(op.f('ix_flight_guides_id'), table_name='flight_guides')
     op.drop_table('flight_guides')
+    op.drop_index(op.f('ix_user_history_id'), table_name='user_history')
+    op.drop_table('user_history')
     op.drop_index(op.f('ix_role_permissions_id'), table_name='role_permissions')
     op.drop_table('role_permissions')
     op.drop_index(op.f('ix_airports_id'), table_name='airports')
