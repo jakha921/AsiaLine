@@ -33,7 +33,7 @@ async def get_tickets(page: Optional[int] = None,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad Request")
 
 
-@routers.get("/ticket/{ticket_id}", tags=["tickets"])
+@routers.get("/ticket/{ticket_id}", response_model=schemas.Ticket, tags=["tickets"])
 async def get_ticket(ticket_id: int,
                      jwt: dict = Depends(JWTBearer()),
                      db: Session = Depends(get_db)):
@@ -49,6 +49,24 @@ async def get_ticket(ticket_id: int,
         return db_ticket
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@routers.get("/ticket/details/{ticket_id}", tags=["tickets"])
+async def get_ticket_details(ticket_id: int,
+                                jwt: dict = Depends(JWTBearer()),
+                                db: Session = Depends(get_db)):
+        """ Get ticket details by id where ticket and flight are not deleted and flight departure date is greater
+        than current date """
+        if not check_permissions("get_ticket_details", jwt):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
+        try:
+            db_ticket = Ticket.get_details_by_id(db, ticket_id)
+            if db_ticket is None:
+                raise ValueError("Ticket not found")
+            return db_ticket
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @routers.post("/ticket", tags=["tickets"])
@@ -106,19 +124,19 @@ async def update_ticket(ticket_id: int,
     if not check_permissions("update_ticket", jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    try:
-        db_ticket = Ticket.get_by_id(db, ticket_id)
-        if db_ticket.is_booked:
-            raise ValueError("Ticket is booked you cannot change this ticket")
-        db_flight = Flight.get_by_id(db, ticket.flight_id)
-        if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
-                db_flight.departure_date < datetime.now():
-            raise ValueError("Flight not found")
-        if db_ticket is None or db_ticket.deleted_at is not None or db_flight.departure_date < datetime.now():
-            raise ValueError("Ticket not found")
-        return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), hard, soft)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    # try:
+    db_ticket = Ticket.get_by_id(db, ticket_id)
+    if db_ticket.is_booked:
+        raise ValueError("Ticket is booked you cannot change this ticket")
+    db_flight = Flight.get_by_id(db, ticket.flight_id)
+    if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
+            db_flight.departure_date < datetime.now():
+        raise ValueError("Flight not found")
+    if db_ticket is None or db_ticket.deleted_at is not None or db_flight.departure_date < datetime.now():
+        raise ValueError("Ticket not found")
+    return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), hard, soft)
+    # except ValueError as e:
+    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @routers.post("/ticket/cancellation", tags=["tickets"])
@@ -135,7 +153,7 @@ async def cancel_ticket_add_to_agent_fine(ticket_cancel: schemas.TicketCancel,
         db_ticket = Ticket.get_by_id(db, ticket_cancel.ticket_id)
         if db_ticket.deleted_at or db_ticket is None:
             raise ValueError("Ticket not found")
-        return Ticket.cancel(db, ticket_cancel)
+        return Ticket.cancel(db, ticket_cancel, get_user_id(jwt))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:

@@ -19,6 +19,7 @@ def get_tickets_by_flight(db: Session, from_date=None, to_date=None,
             from_date, to_date = add_time(from_date, to_date)
 
         query = f"SELECT t.id, t.created_at, t.ticket_number, \
+                        t.passport, \
                         json_build_object( \
                             'id', f.id, \
                             'flight_number', fg.flight_number, \
@@ -70,6 +71,7 @@ def get_tickets_by_flight(db: Session, from_date=None, to_date=None,
                             OR LOWER(fg.flight_number) LIKE '%{search_text}%' \
                             OR LOWER(t.first_name) LIKE '%{search_text}%' \
                             OR LOWER(t.surname) LIKE '%{search_text}%' \
+                            OR LOWER(t.passport) LIKE '%{search_text}%' \
                             OR t.ticket_number::text LIKE '%{search_text}%' \
                             OR LOWER(u.username) LIKE '%{search_text}%' \
                             OR LOWER(t.comment) LIKE '%{search_text}%' \

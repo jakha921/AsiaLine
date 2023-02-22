@@ -6,11 +6,9 @@ from sqlalchemy.orm import Session
 from datetime import datetime, date
 import logging
 
-from crud_models.schemas.tickets import TicketCancel
-from crud_models.views.booking import Booking
-from crud_models.views.tickets import Ticket
 from db import models
 from crud_models.schemas import flights as schemas
+from users.views.user_history import History
 
 
 class FlightPriceHistory:
@@ -74,26 +72,46 @@ class Flight:
     def create(db: Session, flight: schemas.FlightCreate, user_id: int):
         db_flight = models.Flight(**flight.dict())
         db_flight.left_seats = flight.total_seats
-        db_flight.actor_id = user_id
         db.add(db_flight)
         db.commit()
         db.refresh(db_flight)
+
+        # add to user history
+        History.create(db,
+                       user_id=user_id,
+                       action="create flight",
+                       extra_info=f"Flight {db_flight.id} created")
+
         return db_flight
 
     @staticmethod
-    def update(db: Session, db_flight: models.Flight, flight: schemas.FlightUpdate):
+    def update(db: Session, db_flight: models.Flight, flight: schemas.FlightUpdate, user_id: int):
+        extra_info = ""
         for key, value in flight.dict().items():
             if value is not None:
+                # add to extra_info data which is changed
+                if value != getattr(db_flight, key):
+                    extra_info += f"{key}: {getattr(db_flight, key)} -> {value}\n"
                 setattr(db_flight, key, value)
         db.commit()
+
+        History.create(db,
+                       user_id=user_id,
+                       action="update flight",
+                       extra_info=f"Flight {db_flight.id} updated:\n{extra_info}")
+
         return db_flight
 
     @staticmethod
-    def delete(db: Session, flight: models.Flight):
+    def delete(db: Session, flight: models.Flight, userid: int):
         """ get all bookings and tickets of this flight and delete them """
         try:
             flight.deleted_at = datetime.now()
             db.commit()
+
+            # add to user history
+            History.create(db, user_id=userid, action="delete flight", extra_info=f"Flight {flight.id} deleted")
+
             return {"message": "Flight deleted successfully and all tickets and bookings deleted for this flight"}
         except Exception as e:
             print(logging.error(e))

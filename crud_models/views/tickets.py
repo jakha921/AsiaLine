@@ -10,6 +10,8 @@ from db import models
 from crud_models.schemas import tickets as schemas
 from datetime import datetime
 
+from users.views.user_history import History
+
 
 class Ticket:
     @staticmethod
@@ -27,42 +29,63 @@ class Ticket:
 
     @staticmethod
     def get_by_id(db: Session, ticket_id: int):
+        return db.query(models.Ticket).filter(models.Ticket.id == ticket_id).first()
+
+    @staticmethod
+    def get_details_by_id(db: Session, ticket_id: int):
         query = db.execute(
             f"SELECT \
-                t.id, t.first_name, t.surname, t.middle_name, \
-                t.passport, t.dob, t.price, t.is_booked, t.comment, \
-                json_build_object( \
-                    'id', country.id, \
-                    'name_ru', country.country_ru, \
-                    'name_en', country.country_en, \
-                    'name_uz', country.country_uz \
-                ) AS citizenship, \
-                json_build_object( \
-                    'id', g.id, \
-                    'gender_ru', g.gender_ru, \
-                    'gender_en', g.gender_en, \
-                    'gender_uz', g.gender_uz \
-                ) AS gender, \
-                json_build_object( \
-                    'id', class.id, \
-                    'name_ru', class.name_ru, \
-                    'name_en', class.name_en, \
-                    'name_uz', class.name_uz \
-                ) AS class, \
-                json_build_object( \
-                    'id', status.id, \
-                    'name_ru', status.name_ru, \
-                    'name_en', status.name_en, \
-                    'name_uz', status.name_uz \
-                ) AS status, \
-                t.created_at, t.updated_at, t.deleted_at \
-            FROM tickets t \
-            LEFT JOIN countries country ON country.id = t.citizenship \
-            LEFT JOIN genders g on t.gender_id = g.id \
-            LEFT JOIN ticket_classes class on t.class_id = class.id \
-            LEFT JOIN ticket_statuses status on t.status_id = status.id \
-            LEFT JOIN flights f on t.flight_id = f.id \
-            WHERE t.id = {ticket_id} "
+                        t.id, t.ticket_number, t.first_name, t.surname, t.middle_name, \
+                        t.passport, t.passport_expires, t.dob, t.price, t.is_booked, t.comment, \
+                        company.name AS company_name, company.code AS company_code, \
+                        json_build_object( \
+                            'flight_number', fg.flight_number, \
+                            'departure_date', f.departure_date, \
+                            'arrival_date', f.arrival_date, \
+                            'from_city', c1.city_en, \
+                            'from_airport_code', a1.code, \
+                            'to_city', c2.city_en, \
+                            'to_airport_code', a2.code \
+                        ) AS flight, \
+                        json_build_object( \
+                            'id', country.id, \
+                            'name_ru', country.country_ru, \
+                            'name_en', country.country_en, \
+                            'name_uz', country.country_uz,\
+                            'code', country.code \
+                        ) AS citizenship, \
+                        json_build_object( \
+                            'id', g.id, \
+                            'gender_ru', g.gender_ru, \
+                            'gender_en', g.gender_en, \
+                            'gender_uz', g.gender_uz \
+                        ) AS gender, \
+                        json_build_object( \
+                            'id', class.id, \
+                            'name_ru', class.name_ru, \
+                            'name_en', class.name_en, \
+                            'name_uz', class.name_uz \
+                        ) AS class, \
+                        json_build_object( \
+                            'id', status.id, \
+                            'name_ru', status.name_ru, \
+                            'name_en', status.name_en, \
+                            'name_uz', status.name_uz \
+                        ) AS status, \
+                        t.created_at, t.updated_at, t.deleted_at \
+                    FROM tickets t \
+                    LEFT JOIN countries country ON country.id = t.citizenship \
+                    LEFT JOIN genders g on t.gender_id = g.id \
+                    LEFT JOIN ticket_classes class on t.class_id = class.id \
+                    LEFT JOIN ticket_statuses status on t.status_id = status.id \
+                    LEFT JOIN flights f on t.flight_id = f.id \
+                    LEFT JOIN flight_guides fg on f.flight_guide_id = fg.id \
+                    LEFT JOIN companies company on fg.company_id = company.id \
+                    LEFT JOIN airports a1 on fg.from_airport_id = a1.id \
+                    LEFT JOIN airports a2 on fg.to_airport_id = a2.id \
+                    LEFT JOIN cities c1 on a1.city_id = c1.id \
+                    LEFT JOIN cities c2 on a2.city_id = c2.id \
+                    WHERE t.id = {ticket_id} "
         )
 
         return query.first()
@@ -149,6 +172,10 @@ class Ticket:
             db.add(db_agent_debt)
             db.commit()
             db.refresh(db_agent_debt)
+
+            # add to history this ticket
+            History.create(db, user_id=user_id, action="create ticket", extra_info=f'Ticket {db_ticket.id} created')
+
             return {"message": "Ticket created successfully"}
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -157,7 +184,7 @@ class Ticket:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble creating")
 
     @staticmethod
-    def cancel(db: Session, ticket_cancel: schemas.TicketCancel):
+    def cancel(db: Session, ticket_cancel: schemas.TicketCancel, user_id: int):
         db_ticket = db.query(
             models.Ticket, models.Agent, models.Flight). \
             filter(
@@ -182,6 +209,9 @@ class Ticket:
         db.add(db_agent_debt)
         db.commit()
         db.refresh(db_agent_debt)
+
+        # add to history this ticket
+        History.create(db, user_id=user_id, action="cancel ticket", extra_info=f'Ticket {ticket.id} canceled')
 
         return {"message": "Ticket deleted successfully and fine added to agent balance"}
 
@@ -237,8 +267,12 @@ class Ticket:
                     db_ticket.price -= luggage
                     balance += luggage
 
+            extra_info = ""
             for key, value in ticket.dict().items():
                 if value is not None:
+                    # add to extra_info data which is changed
+                    if value != getattr(db_ticket, key):
+                        extra_info += f"{key}: {getattr(db_ticket, key)} -> {value}\n"
                     setattr(db_ticket, key, value)
 
             if hard or soft:
@@ -261,6 +295,11 @@ class Ticket:
             db.add(db_flight)
             db.commit()
             db.refresh(db_flight)
+
+            # add to history this ticket
+            History.create(db, user_id=user_id, action="update ticket",
+                           extra_info=f'Ticket {db_ticket.id} updated:\n{extra_info}')
+
             return {"message": "Ticket updated successfully"}
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e))

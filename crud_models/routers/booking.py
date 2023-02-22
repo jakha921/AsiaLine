@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 
 from auth.auth_token.auth_bearer import JWTBearer
-from auth.auth_token.auth_handler import check_permissions
+from auth.auth_token.auth_handler import check_permissions, get_user_id
 from crud_models.views.flights import Flight
 from db.database import get_db
 from crud_models.schemas import booking as schemas
@@ -83,7 +83,7 @@ async def create_booking(booking: schemas.BookingCreate,
         if Booking.get_by_flight_id_and_agent_id(db, booking.flight_id, booking.agent_id):
             raise ValueError("Booking already exists")
 
-        return Booking.create(db, booking, db_flight)
+        return Booking.create(db, booking, db_flight, get_user_id(jwt))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     # except Exception as e:
@@ -119,7 +119,7 @@ async def update_booking(booking_id: int,
         # if Booking.get_by_flight_id_and_agent_id(db, booking.flight_id, booking.agent_id):
         #     raise ValueError("Booking already exists")
 
-        return Booking.update(db, booking, db_booking, db_flight)
+        return Booking.update(db, booking, db_booking, db_flight, get_user_id(jwt))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -136,7 +136,7 @@ async def delete_booking(booking_id: int,
         db_booking = Booking.get_by_id(db, booking_id)
         if db_booking is None or db_booking.deleted_at is not None:
             raise ValueError("Booking not found")
-        return Booking.delete(db, booking_id)
+        return Booking.delete(db, booking_id, get_user_id(jwt))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:

@@ -6,6 +6,7 @@ from datetime import datetime
 
 from db import models
 from crud_models.schemas import booking as schemas
+from users.views.user_history import History
 
 
 class Booking:
@@ -49,7 +50,8 @@ class Booking:
     @staticmethod
     def create(db: Session,
                booking: schemas.BookingCreate,
-               flight: models.Flight):
+               flight: models.Flight,
+               user_id: int):
         """ if booking created successfully, -1 from models Flight left_seats """
         try:
             if flight.left_seats - booking.hard_block - booking.soft_block < 0:
@@ -62,27 +64,41 @@ class Booking:
             db.commit()
             db.refresh(db_booking)
 
+            # add history
+            History.create(db, user_id=user_id, action='create booking',
+                           extra_info=f'Booking {db_booking.id} created')
+
             return db_booking
         except ValueError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     @staticmethod
-    def update(db: Session, patch: schemas.BookingUpdate, booking: models.Booking, flight: models.Flight):
+    def update(db: Session, booking: schemas.BookingUpdate, db_booking: models.Booking, flight: models.Flight,
+               user_id: int):
         """ find difference between old and new booking and update models Flight left_seats """
 
-        diff = booking.hard_block + booking.soft_block - patch.hard_block - patch.soft_block
+        diff = db_booking.hard_block + db_booking.soft_block - booking.hard_block - booking.soft_block
         flight.left_seats += diff
         if flight.left_seats < 0:
             raise ValueError('Flight has not enough seats')
 
-        for key, value in patch.dict().items():
+        extra_info = ''
+        for key, value in booking.dict().items():
             if value is not None:
-                setattr(booking, key, value)
+                # add to extra_info data which is changed
+                if value != getattr(db_booking, key):
+                    extra_info += f"{key}: {getattr(db_booking, key)} -> {value}\n"
+                setattr(db_booking, key, value)
         db.commit()
-        return booking
+
+        # add history
+        print(extra_info)
+        History.create(db, user_id=user_id, action='update booking',
+                       extra_info=f'Booking {db_booking.id} updated\n{extra_info}')
+        return db_booking
 
     @staticmethod
-    def delete(db: Session, booking_id: int):
+    def delete(db: Session, booking_id: int, user_id: int):
         db_booking = db.query(models.Booking, models.Agent, models.Flight). \
             filter(models.Booking.id == booking_id,
                    models.Agent.id == models.Booking.agent_id,
@@ -99,4 +115,7 @@ class Booking:
         booking.deleted_at = datetime.now()
         db.commit()
 
+        # add history
+        History.create(db, user_id=user_id, action='delete booking',
+                       extra_info=f'Booking {booking.id} deleted')
         return {"message": "Booking deleted successfully"}

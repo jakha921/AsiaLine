@@ -38,6 +38,7 @@ permission = [
     'get_flight_prices',
     'get_tickets',
     'get_ticket',
+    'get_ticket_details',
     'create_ticket',
     'update_ticket',
     'cancel_ticket',

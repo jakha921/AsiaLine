@@ -126,7 +126,7 @@ async def update_flight(flight_id: int,
             flight.left_seats = db_flight.left_seats
 
         current_price, db_price = flight.price, db_flight.price
-        update = Flight.update(db, db_flight, flight)
+        update = Flight.update(db, db_flight, flight, get_user_id(jwt))
         if current_price != db_price:
             FlightPriceHistory.create(db, flight.price, update.id)
         return schemas.Flight.from_orm(update)
@@ -157,7 +157,7 @@ async def delete_flight(flight_id: int,
             raise ValueError(f"Flight has {len(db_ticket)} tickets")
         if db_booking := db.query(models.Booking).filter(models.Booking.flight_id == db_flight.id).all():
             raise ValueError(f"Flight has {len(db_booking)} bookings")
-        return Flight.delete(db, db_flight)
+        return Flight.delete(db, db_flight, get_user_id(jwt))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:

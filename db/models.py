@@ -54,25 +54,45 @@ class UserHistory(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     action = Column(
         Enum(
-            "flight_create",
-            "flight_update",
-            "flight_delete",
-            "ticket_create",
-            "ticket_update",
-            "ticket_delete",
-            "booking_create",
-            "booking_update",
-            "booking_delete",
-            "user_create",
-            "user_update",
-            "user_delete",
-            "agent_create",
-            "agent_update",
-            "agent_delete",
-            "agent_balance_update",
-            "agent_credit_update",
-            "agent_block",
-            "agent_unblock",
+            "create flight",
+            "update flight",
+            "delete flight",
+            "create ticket",
+            "update ticket",
+            "cancel ticket",
+            "create booking",
+            "update booking",
+            "delete booking",
+            "create user",
+            "update user",
+            "delete user",
+            "create agent",
+            "update agent",
+            "delete agent",
+            "create agent debit",
+            "update agent debit",
+            "delete agent debit",
+            "create discount",
+            "update discount",
+            "delete discount",
+            "create role",
+            "update role",
+            "delete role",
+            "create country",
+            "update country",
+            "delete country",
+            "create city",
+            "update city",
+            "delete city",
+            "create airport",
+            "update airport",
+            "delete airport",
+            "create company",
+            "update company",
+            "delete company",
+            "create flight guide",
+            "update flight guide",
+            "delete flight guide",
             name="Action"
         ), nullable=False
     )
@@ -255,6 +275,7 @@ class Flight(Base):
     flight_guide_id = Column(Integer, ForeignKey("flight_guides.id"), nullable=False)
     departure_date = Column(DateTime, nullable=False)
     arrival_date = Column(DateTime, nullable=False)
+    purchase_price = Column(Integer, default=0)
     price = Column(Integer, default=0)
     currency = Column(Enum('RUB', 'USD', 'EUR', 'UZS', name='CurrencyCode'), default='RUB')
     total_seats = Column(Integer, default=0)
@@ -409,6 +430,7 @@ class Ticket(Base):
     gender_id = Column(Integer, ForeignKey('genders.id'), nullable=False)
     passport = Column(String(10), nullable=False)
     passport_expires = Column(Date, nullable=False)
+    phone = Column(String(20), nullable=True)
     citizenship = Column(Integer, ForeignKey('countries.id'), nullable=False)
     class_id = Column(Integer, ForeignKey('ticket_classes.id'), nullable=False)
     price = Column(Integer, default=0)

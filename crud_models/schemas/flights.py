@@ -9,6 +9,7 @@ class FlightCreate(BaseModel):
     flight_guide_id: int
     departure_date: datetime
     arrival_date: datetime
+    purchase_price: int
     price: int
     currency: CurrencyCode
     total_seats: int
@@ -53,6 +54,7 @@ class FlightCreate(BaseModel):
                 "flight_guide_id": 1,
                 "departure_date": (datetime.now() + timedelta(hours=6)).strftime("%Y-%m-%d %H:%M"),
                 "arrival_date": (datetime.now() + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+                "purchase_price": 1000,
                 "price": 1500,
                 "currency": "RUB",
                 "total_seats": 30,
@@ -65,6 +67,7 @@ class FlightUpdate(FlightCreate):
     flight_guide_id: Optional[int]
     departure_date: Optional[datetime]
     arrival_date: Optional[datetime]
+    purchase_price: Optional[int]
     price: Optional[int]
     currency: Optional[str]
     total_seats: Optional[int]

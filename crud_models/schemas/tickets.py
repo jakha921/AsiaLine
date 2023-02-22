@@ -14,6 +14,7 @@ class TicketCreate(BaseModel):
     gender_id: int
     passport: str
     passport_expires: Optional[date]
+    phone: Optional[str]
     citizenship: int
     class_id: int
     agent_id: int
@@ -89,6 +90,12 @@ class TicketCreate(BaseModel):
             raise ValueError('passport_expires must be greater than now')
         return v
 
+    @validator('phone')
+    def phone_must_be_gt_than_0(cls, v):
+        if len(v) < 1 and len(v) > 20:
+            raise ValueError('phone must be greater than 0 and less than 20')
+        return v
+
     # endregion
 
     class Config:
@@ -102,6 +109,7 @@ class TicketCreate(BaseModel):
                 "gender_id": 1,
                 "passport": "AA1234567",
                 "passport_expires": "2025-01-01",
+                "phone": "Not required (type: str)",
                 "citizenship": 1,
                 "class_id": 1,
                 "agent_id": 1,
