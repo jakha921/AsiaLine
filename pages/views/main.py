@@ -53,7 +53,7 @@ def get_flights_and_search(db: Session, searching_text: str, from_date: date, to
 
         if from_date and to_date:
             from_date, to_date = add_time(from_date, to_date)
-            query += f"AND f.on_sale < '{from_date}' \
+            query += f"AND f.on_sale < '{datetime.now()}' \
                     AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' "
         else:
             query += f"AND f.on_sale < '{datetime.now()}' \

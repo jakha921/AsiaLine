@@ -39,6 +39,7 @@ class Ticket:
                         t.passport, t.passport_expires, t.dob, t.price, t.is_booked, t.comment, \
                         company.name AS company_name, company.code AS company_code, \
                         json_build_object( \
+                            'id', f.id, \
                             'flight_number', fg.flight_number, \
                             'departure_date', f.departure_date, \
                             'arrival_date', f.arrival_date, \

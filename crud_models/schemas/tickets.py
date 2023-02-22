@@ -89,13 +89,6 @@ class TicketCreate(BaseModel):
         if v < datetime.now().date():
             raise ValueError('passport_expires must be greater than now')
         return v
-
-    @validator('phone')
-    def phone_must_be_gt_than_0(cls, v):
-        if len(v) < 1 and len(v) > 20:
-            raise ValueError('phone must be greater than 0 and less than 20')
-        return v
-
     # endregion
 
     class Config:

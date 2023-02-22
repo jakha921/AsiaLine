@@ -10,9 +10,6 @@ from db.database import get_db
 from pages.views.currency import get_currency_last_item
 from pages.views.main import get_dates_range, get_flights_and_search
 
-# from pages import sort
-# from pages.views import api
-
 routers = APIRouter()
 
 
