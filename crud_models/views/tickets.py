@@ -37,6 +37,7 @@ class Ticket:
             f"SELECT \
                         t.id, t.ticket_number, t.first_name, t.surname, t.middle_name, \
                         t.passport, t.passport_expires, t.dob, t.price, t.is_booked, t.comment, \
+                        t.agent_id, t.luggage, \
                         company.name AS company_name, company.code AS company_code, \
                         json_build_object( \
                             'id', f.id, \

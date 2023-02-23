@@ -19,7 +19,7 @@ def get_tickets_by_flight(db: Session, from_date=None, to_date=None,
             from_date, to_date = add_time(from_date, to_date)
 
         query = f"SELECT t.id, t.created_at, t.ticket_number, \
-                        t.passport, \
+                        t.passport, t.price, t.currency, \
                         json_build_object( \
                             'id', f.id, \
                             'flight_number', fg.flight_number, \
