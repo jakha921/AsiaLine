@@ -8,7 +8,7 @@ from auth.auth_token.auth_bearer import JWTBearer
 from auth.auth_token.auth_handler import check_permissions
 from db.database import get_db
 from pages.views.currency import get_currency_last_item
-from pages.views.main import get_dates_range, get_flights_and_search
+from pages.views.main import get_dates_range, get_flights_and_search, get_grouped_flight
 
 routers = APIRouter()
 
@@ -62,3 +62,25 @@ async def get_flights(db: Session = Depends(get_db),
         'flights': db_flights
     }
     return result
+
+
+@routers.get("/main/flights/grouped", tags=["pages"])
+async def get_flights_grouped(db: Session = Depends(get_db),
+                                # searching_text: Optional[str] = None,
+                                from_date: Optional[date] = None,
+                                to_date: Optional[date] = None,
+                                page: int = None,
+                                limit: int = None,
+                                jwt: dict = Depends(JWTBearer())
+                                ):
+        """ Get flights where departure date is between from_date and to_date and search by text """
+        if not check_permissions('flights_main', jwt):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        db_flights, counter = get_grouped_flight(db, from_date, to_date, page, limit)
+
+        result = {
+            'currency': get_currency_last_item(db),
+            'flights_count': counter,
+            'flights': db_flights
+        }
+        return result

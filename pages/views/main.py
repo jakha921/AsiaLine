@@ -83,3 +83,87 @@ def get_flights_and_search(db: Session, searching_text: str, from_date: date, to
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
+
+def get_grouped_flight(db: Session,
+                       from_date: date,
+                       to_date: date,
+                       page: int,
+                       limit: int):
+    """
+    Get grouped flight by flight_number
+
+    Example:
+        {"flight_number":"WZ-1107",
+            "flights":[{
+                "id":5,
+                "flight_number":"WZ-1107",
+                "departure_date":"2023-03-01T04:45:00",
+                "price":19000,
+                "currency":"RUB",
+                "from_airport":{"id":22,"airport_ru":"Наманаган","airport_en":"Namangan","airport_uz":"Namangan","code":"NMA"},
+                "to_airport":{"id":10,"airport_ru":"Домодедово","airport_en":"Domodedovo","airport_uz":"Domodedovo","code":"DME"},
+                "total_seats":20,
+                "left_seats":9
+            },
+            {
+                "id":7,
+                "flight_number":"WZ-1107",
+                "departure_date":"2023-03-01T04:45:00",
+                "price":19000,
+                "currency":"RUB",
+                "from_airport":{"id":22,"airport_ru":"Наманаган","airport_en":"Namangan","airport_uz":"Namangan","code":"NMA"},
+                "to_airport":{"id":10,"airport_ru":"Домодедово","airport_en":"Domodedovo","airport_uz":"Domodedovo","code":"DME"},
+                "total_seats":20,
+                "left_seats":9
+            }]}]
+    """
+    try:
+        query = f"SELECT fg.flight_number, \
+                    json_agg(json_build_object( \
+                        'id', f.id, \
+                        'flight_number', fg.flight_number, \
+                        'departure_date', f.departure_date, \
+                        'price', f.price, \
+                        'currency', f.currency, \
+                        'from_airport', json_build_object( \
+                            'id', a1.id, \
+                            'airport_ru', a1.airport_ru, \
+                            'airport_en', a1.airport_en, \
+                            'airport_uz', a1.airport_uz, \
+                            'code', a1.code \
+                        ), \
+                        'to_airport', json_build_object( \
+                            'id', a2.id, \
+                            'airport_ru', a2.airport_ru, \
+                            'airport_en', a2.airport_en, \
+                            'airport_uz', a2.airport_uz, \
+                            'code', a2.code \
+                        ), \
+                        'total_seats', f.total_seats, \
+                        'left_seats', f.left_seats \
+                    )) AS flights \
+                FROM flights AS f \
+                JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
+                JOIN airports AS a1 ON fg.from_airport_id = a1.id \
+                JOIN airports AS a2 ON fg.to_airport_id = a2.id \
+                WHERE f.deleted_at IS NULL "
+
+        if from_date and to_date:
+            from_date, to_date = add_time(from_date, to_date)
+            query += f"AND f.on_sale < '{datetime.now()}' \
+                    AND f.departure_date BETWEEN '{from_date}' AND '{to_date}' "
+        else:
+            query += f"AND f.on_sale < '{datetime.now()}' \
+                    AND f.departure_date > '{datetime.now()}' "
+
+        query += f"GROUP BY fg.flight_number "
+
+        length = len(db.execute(query).fetchall())
+
+        if page and limit:
+            query += f"LIMIT {limit} OFFSET {(page - 1) * limit}"
+
+        return db.execute(query).fetchall(), length
+    except Exception as e:
+        print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
