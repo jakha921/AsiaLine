@@ -17,7 +17,7 @@ def get_flights_by_range_date(db: Session,
     if from_date and to_date:
         from_date, to_date = add_time(from_date, to_date)
 
-    query = f"SELECT f.id, f.departure_date, fg.flight_number,  f.price, f.currency, \
+    query = f"SELECT f.id, f.departure_date, fg.flight_number,  f.price, f.currency,\
                     json_build_object( \
                         'id', a1.id, \
                         'airport_ru', a1.airport_ru, \
@@ -33,7 +33,8 @@ def get_flights_by_range_date(db: Session,
                         'code', a2.code \
                     ) AS to_airport, \
                     f.total_seats, f.left_seats, f.on_sale , \
-                    (COALESCE(SUM(b.hard_block) + SUM(b.soft_block), 0)) AS booked_seats \
+                    (COALESCE(SUM(b.hard_block) + SUM(b.soft_block), 0)) AS booked_seats, \
+                    (SELECT COUNT(*) FROM tickets AS t WHERE t.flight_id = f.id AND t.deleted_at IS NULL) AS tickets_count \
                     FROM flights AS f \
                     JOIN flight_guides AS fg ON f.flight_guide_id = fg.id \
                     JOIN airports AS a1 ON fg.from_airport_id = a1.id \

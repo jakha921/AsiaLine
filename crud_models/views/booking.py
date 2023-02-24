@@ -39,12 +39,8 @@ class Booking:
     def is_agent_has_booking(db: Session, agent_id: int, flight_id: int):
         return db.query(models.Booking). \
             filter(
-            models.Booking.agent_id == agent_id,
-            models.Booking.id == flight_id,
-            models.Booking.deleted_at == None,
-            models.Flight.id == models.Booking.flight_id,
-            models.Flight.deleted_at == None,
-            models.Flight.departure_date >= datetime.now()
+                models.Booking.agent_id == agent_id,
+                models.Booking.flight_id == flight_id,
         ).first()
 
     @staticmethod

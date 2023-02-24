@@ -136,7 +136,11 @@ async def update_ticket(ticket_id: int,
         if db_ticket is None or db_ticket.deleted_at is not None or db_flight.departure_date < datetime.now():
             raise ValueError("Ticket not found")
         db_booking = Booking.is_agent_has_booking(db, db_ticket.agent_id, db_ticket.flight_id)
-        if (hard or soft) and db_booking is None:
+        if hard and db_booking is not None and db_booking.hard_block <= 0:
+            raise ValueError("Agent does not have any hard quotas")
+        if soft and db_booking is not None and db_booking.soft_block <= 0:
+            raise ValueError("Agent does not have any soft quotas")
+        if hard or soft and db_booking is None:
             raise ValueError("Agent does not have any quotas")
         return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), db_booking, hard, soft)
     except ValueError as e:
