@@ -238,9 +238,11 @@ class Ticket:
                     if value is not None:
                         setattr(new_ticket, key, value)
                 new_ticket.actor_id = user_id
-
                 # create a new ticket and cancel old ticket
+
                 Ticket.create(db, schemas.TicketCreate(**new_ticket.__dict__), db_flight, user_id, hard, soft)
+                print('New', new_ticket)
+                print('DB', db_ticket)
                 Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency,
                                                        comment='Ticket was created wrong'), user_id)
                 models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_ticket.flight_id, ticket_id=db_ticket.id,

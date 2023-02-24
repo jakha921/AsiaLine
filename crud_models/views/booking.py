@@ -37,10 +37,12 @@ class Booking:
 
     @staticmethod
     def is_agent_has_booking(db: Session, agent_id: int, flight_id: int):
+        """ check if agent has booking on this flight """
+        print(agent_id, flight_id)
         return db.query(models.Booking). \
             filter(
-                models.Booking.agent_id == agent_id,
-                models.Booking.flight_id == flight_id,
+            models.Booking.agent_id == agent_id,
+            models.Booking.flight_id == flight_id
         ).first()
 
     @staticmethod
