@@ -3,7 +3,7 @@ import random
 from typing import Optional
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from db import models
@@ -223,6 +223,7 @@ class Ticket:
                ticket: schemas.TicketUpdate,
                db_flight: models.Flight,
                user_id: int,
+               db_booking: models.Booking,
                hard: bool = False,
                soft: bool = False):
         try:
@@ -241,25 +242,16 @@ class Ticket:
                 # create a new ticket and cancel old ticket
                 Ticket.create(db, schemas.TicketCreate(**new_ticket.__dict__), db_flight, user_id, hard, soft)
                 Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency,
-                                                       comment='Ticket was created wrong'))
+                                                       comment='Ticket was created wrong'), user_id)
+                models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_ticket.flight_id, ticket_id=db_ticket.id,
+                                 amount=0, type='fine', comment='Ticket was created wrong')
 
-            if db_ticket.luggage != ticket.luggage or hard or soft:
-                query = db.query(models.FlightGuide.luggage, models.Agent.balance, models.Booking). \
-                    join(models.FlightGuide, models.FlightGuide.id == db_flight.flight_guide_id). \
+            if db_ticket.luggage != ticket.luggage:
+                query = db.query(models.FlightGuide.luggage, models.Agent.balance). \
                     join(models.Agent, models.Agent.id == db_ticket.agent_id). \
-                    join(models.Booking, models.Booking.id == db_ticket.booking_id). \
-                    filter(models.Booking.agent_id == db_ticket.agent_id).first()
+                    filter(models.FlightGuide.id == db_flight.flight_guide_id).first()
 
-                luggage, balance, booking = query
-
-                if hard or soft:
-                    if booking.hard_block - 1 < 0 or booking.soft_block - 1 < 0:
-                        raise ValueError('Agent has not enough block')
-                    if hard:
-                        booking.hard_block -= 1
-                    if soft:
-                        booking.soft_block -= 1
-                    db_flight.left_seats += 1
+                luggage, balance = query
 
                 if not db_ticket.luggage and ticket.luggage:
                     db_ticket.price += luggage
@@ -269,6 +261,37 @@ class Ticket:
                     db_ticket.price -= luggage
                     balance += luggage
 
+            if hard or soft:
+                if db_booking.hard_block - 1 < 0 or db_booking.soft_block - 1 < 0:
+                    raise ValueError('Agent has not enough block')
+                if hard:
+                    db_booking.hard_block -= 1
+                if soft:
+                    db_booking.soft_block -= 1
+                db_flight.left_seats += 1
+                db_ticket.is_booked = True
+            else:
+                db_ticket.is_booked = False
+
+            if db_ticket.price != ticket.price or hard or soft:
+                # get agent debt from db
+                db_agent_debt = db.query(models.AgentDebt). \
+                    filter(models.AgentDebt.ticket_id == db_ticket.id,
+                           models.AgentDebt.flight_id == db_ticket.flight_id,
+                           models.AgentDebt.agent_id == db_ticket.agent_id,
+                           models.AgentDebt.type == 'purchase').first()
+
+                if db_agent_debt is None:
+                    db_agent_debt = models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_ticket.flight_id,
+                                                     ticket_id=db_ticket.id, amount=db_ticket.price, type='purchase')
+                else:
+                    db_agent_debt.amount = db_ticket.price
+
+                db.add(db_agent_debt)
+                db.commit()
+                db.refresh(db_agent_debt)
+
+            # update ticket
             extra_info = ""
             for key, value in ticket.dict().items():
                 if value is not None:
@@ -277,22 +300,7 @@ class Ticket:
                         extra_info += f"{key}: {getattr(db_ticket, key)} -> {value}\n"
                     setattr(db_ticket, key, value)
 
-            if hard or soft:
-                db_ticket.is_booked = True
-            else:
-                db_ticket.is_booked = False
-
-            db_ticket.actor_id = user_id
             db.add(db_ticket)
-
-            if hard or soft and db_ticket.luggage != ticket.luggage:
-                db_agent_debt = models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_flight.id,
-                                                 ticket_id=db_ticket.id,
-                                                 amount=db_ticket.price, type='purchase')
-
-                db.add(db_agent_debt)
-                db.commit()
-                db.refresh(db_agent_debt)
 
             db.add(db_flight)
             db.commit()

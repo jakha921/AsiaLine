@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 
+from crud_models.views.booking import Booking
 from crud_models.views.flights import Flight
 from db.database import get_db
 from crud_models.schemas import tickets as schemas
@@ -124,19 +125,22 @@ async def update_ticket(ticket_id: int,
     if not check_permissions("update_ticket", jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
-    # try:
-    db_ticket = Ticket.get_by_id(db, ticket_id)
-    if db_ticket.is_booked:
-        raise ValueError("Ticket is booked you cannot change this ticket")
-    db_flight = Flight.get_by_id(db, ticket.flight_id)
-    if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
-            db_flight.departure_date < datetime.now():
-        raise ValueError("Flight not found")
-    if db_ticket is None or db_ticket.deleted_at is not None or db_flight.departure_date < datetime.now():
-        raise ValueError("Ticket not found")
-    return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), hard, soft)
-    # except ValueError as e:
-    #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    try:
+        db_ticket = Ticket.get_by_id(db, ticket_id)
+        if db_ticket.is_booked:
+            raise ValueError("Ticket is booked you cannot change this ticket")
+        db_flight = Flight.get_by_id(db, ticket.flight_id)
+        if db_flight is None or db_flight.deleted_at is not None or db_flight.on_sale > datetime.now() or \
+                db_flight.departure_date < datetime.now():
+            raise ValueError("Flight not found")
+        if db_ticket is None or db_ticket.deleted_at is not None or db_flight.departure_date < datetime.now():
+            raise ValueError("Ticket not found")
+        db_booking = Booking.is_agent_has_booking(db, db_ticket.agent_id, db_ticket.flight_id)
+        if (hard or soft) and db_booking is None:
+            raise ValueError("Agent does not have any quotas")
+        return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), db_booking, hard, soft)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @routers.post("/ticket/cancellation", tags=["tickets"])
