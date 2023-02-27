@@ -89,34 +89,7 @@ def get_grouped_flight(db: Session,
                        to_date: date,
                        page: int,
                        limit: int):
-    """
-    Get grouped flight by flight_number
-
-    Example:
-        {"flight_number":"WZ-1107",
-            "flights":[{
-                "id":5,
-                "flight_number":"WZ-1107",
-                "departure_date":"2023-03-01T04:45:00",
-                "price":19000,
-                "currency":"RUB",
-                "from_airport":{"id":22,"airport_ru":"Наманаган","airport_en":"Namangan","airport_uz":"Namangan","code":"NMA"},
-                "to_airport":{"id":10,"airport_ru":"Домодедово","airport_en":"Domodedovo","airport_uz":"Domodedovo","code":"DME"},
-                "total_seats":20,
-                "left_seats":9
-            },
-            {
-                "id":7,
-                "flight_number":"WZ-1107",
-                "departure_date":"2023-03-01T04:45:00",
-                "price":19000,
-                "currency":"RUB",
-                "from_airport":{"id":22,"airport_ru":"Наманаган","airport_en":"Namangan","airport_uz":"Namangan","code":"NMA"},
-                "to_airport":{"id":10,"airport_ru":"Домодедово","airport_en":"Domodedovo","airport_uz":"Domodedovo","code":"DME"},
-                "total_seats":20,
-                "left_seats":9
-            }]}]
-    """
+    """ Get grouped flight by flight_number """
     try:
         query = f"SELECT fg.flight_number, \
                     json_agg(json_build_object( \

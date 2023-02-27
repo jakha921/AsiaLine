@@ -102,7 +102,7 @@ class TicketCreate(BaseModel):
                 "gender_id": 1,
                 "passport": "AA1234567",
                 "passport_expires": "2025-01-01",
-                "phone": "Not required (type: str)",
+                "phone": "+998901234567",
                 "citizenship": 1,
                 "class_id": 1,
                 "agent_id": 1,

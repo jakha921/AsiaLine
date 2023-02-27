@@ -142,7 +142,7 @@ async def update_ticket(ticket_id: int,
         if db_booking is not None and (soft and db_booking.soft_block <= 0):
             raise ValueError("Soft block is not enough")
         if (hard or soft) and db_booking is None:
-            raise ValueError("Agent does not have any quotas for this flight")
+            raise ValueError("Agent does not have any quotas")
         return Ticket.update(db, db_ticket, ticket, db_flight, get_user_id(jwt), db_booking, hard, soft)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

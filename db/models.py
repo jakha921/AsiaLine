@@ -96,7 +96,7 @@ class UserHistory(Base):
             name="Action"
         ), nullable=False
     )
-    extra_info = Column(String(255), nullable=True)
+    extra_info = Column(String(800), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", backref="user_history")
@@ -350,7 +350,8 @@ class Booking(Base):
     actor = relationship("User", backref="bookings")
 
     def __repr__(self):
-        return f"Booking(id={self.id}, flight_id={self.flight_id}, actor_id={self.actor_id}), agent_id={self.agent_id})"
+        return f"Booking(id={self.id}, flight_id={self.flight_id}, agent_id={self.agent_id}, " \
+               f"hard_block={self.hard_block}, soft_block={self.soft_block})"
 
 
 class Platform(str, Enum):

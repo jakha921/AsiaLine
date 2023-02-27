@@ -153,9 +153,11 @@ async def delete_flight(flight_id: int,
         db_flight = Flight.get_by_id(db, flight_id)
         if db_flight is None or db_flight.deleted_at is not None:
             raise ValueError("Flight not found")
-        if db_ticket := db.query(models.Ticket).filter(models.Ticket.flight_id == db_flight.id).all():
+        if db_ticket := db.query(models.Ticket).filter(models.Ticket.flight_id == db_flight.id,
+                                                       models.Ticket.deleted_at.is_(None)).all():
             raise ValueError(f"Flight has {len(db_ticket)} tickets")
-        if db_booking := db.query(models.Booking).filter(models.Booking.flight_id == db_flight.id).all():
+        if db_booking := db.query(models.Booking).filter(models.Booking.flight_id == db_flight.id,
+                                                         models.Booking.deleted_at.is_(None)).all():
             raise ValueError(f"Flight has {len(db_booking)} bookings")
         return Flight.delete(db, db_flight, get_user_id(jwt))
     except ValueError as e:

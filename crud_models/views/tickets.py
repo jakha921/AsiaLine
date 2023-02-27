@@ -237,12 +237,9 @@ class Ticket:
                 for key, value in ticket.dict().items():
                     if value is not None:
                         setattr(new_ticket, key, value)
-                new_ticket.actor_id = user_id
-                # create a new ticket and cancel old ticket
 
+                # create a new ticket and cancel old ticket
                 Ticket.create(db, schemas.TicketCreate(**new_ticket.__dict__), db_flight, user_id, hard, soft)
-                print('New', new_ticket)
-                print('DB', db_ticket)
                 Ticket.cancel(db, schemas.TicketCancel(ticket_id=db_ticket.id, fine=0, currency=db_ticket.currency,
                                                        comment='Ticket was created wrong'), user_id)
                 models.AgentDebt(agent_id=db_ticket.agent_id, flight_id=db_ticket.flight_id, ticket_id=db_ticket.id,
@@ -263,7 +260,7 @@ class Ticket:
                     db_ticket.price -= luggage
                     balance += luggage
 
-            if hard or soft:
+            if (hard or soft) and db_ticket.agent_id is ticket.agent_id:
                 if db_booking.hard_block - 1 < 0 or db_booking.soft_block - 1 < 0:
                     raise ValueError('Agent has not enough block')
                 if hard:
@@ -300,7 +297,8 @@ class Ticket:
                     # add to extra_info data which is changed
                     if value != getattr(db_ticket, key):
                         extra_info += f"{key}: {getattr(db_ticket, key)} -> {value}\n"
-                    setattr(db_ticket, key, value)
+                    if db_ticket.agent_id is ticket.agent_id:
+                        setattr(db_ticket, key, value)
 
             db.add(db_ticket)
 
