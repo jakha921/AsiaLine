@@ -8,6 +8,7 @@ from auth.auth_token.auth_bearer import JWTBearer
 from auth.auth_token.auth_handler import check_permissions
 from db.database import get_db
 from pages.views import payments
+from pages.views.currency import get_currency_last_item
 
 routers = APIRouter()
 
@@ -27,9 +28,10 @@ async def get_tickets(db: Session = Depends(get_db),
     # if not check_permissions('payments_main', jwt):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_payments = payments.get_refill_by_agent_id(db, from_date, to_date, agent_id, page, limit, searching_text)
+        db_payments, counter = payments.get_refill_by_agent_id(db, from_date, to_date, agent_id, page, limit, searching_text)
         return {
-            'payments_count': len(db_payments),
+            'currency': get_currency_last_item(db),
+            'payments_count': counter,
             'payments': db_payments
         }
     except Exception as e:
@@ -47,4 +49,9 @@ async def get_agent_balances(db: Session = Depends(get_db),
     """ Get all agent balances or by agent id """
     # if not check_permissions('payments_agents_balance', jwt):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-    return payments.get_agents_balance(db, agent_id, page, limit)
+    db_agent_balances, counter = payments.get_agents_balance(db, agent_id, page, limit)
+    return {
+        'currency': get_currency_last_item(db),
+        'agent_balances_count': counter,
+        'agent_balances': db_agent_balances
+    }

@@ -4,6 +4,8 @@ from datetime import datetime
 import traceback
 import logging
 
+from pages.views.main import add_time
+
 
 # get tickets by agent_id
 def get_refill_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=None, limit=None, search_text=None):
@@ -44,16 +46,19 @@ def get_refill_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=
             query += f"AND (r.amount = {search_text}) "
 
         query += f"ORDER BY r.created_at "
+
+        payments = db.execute(query).fetchall()
+
         if limit and page:
             query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-        return db.execute(text(query)).fetchall()
+        return db.execute(query).fetchall(), len(payments)
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
 
 
-def get_agents_balance(db: Session, agent_id, page: int = None, limit: int = None):
+def get_agents_balance(db: Session, agent_id: int = None, page: int = None, limit: int = None):
     """ get agents by agent_id if agent_id is None then get all agents """
     try:
         query = f"SELECT agents.id, agents.company_name, agents.balance \
@@ -61,13 +66,16 @@ def get_agents_balance(db: Session, agent_id, page: int = None, limit: int = Non
                 WHERE agents.deleted_at IS NULL "
 
         if agent_id:
-            query += f"AND agents.id = agent_id "
+            query += f"AND  agents.id = {agent_id} "
 
         query += f"ORDER BY agents.balance "
+
+        counter = db.execute(query).fetchall()
+
         if limit and page:
             query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-        return db.execute(text(query)).fetchall()
+        return db.execute(text(query)).fetchall(), len(counter)
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
