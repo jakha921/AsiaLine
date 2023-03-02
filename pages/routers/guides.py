@@ -22,9 +22,9 @@ async def get_countries(db: Session = Depends(get_db),
                         page: Optional[int] = None,
                         limit: Optional[int] = None):
     try:
-        db_countries = Country.get_list(db, page, limit)
+        db_countries, counter = Country.get_list(db, page, limit)
         return {
-            'countries_count': len(db_countries),
+            'countries_count': counter,
             'countries': db_countries
         }
     except Exception as e:
@@ -38,9 +38,9 @@ async def get_cities(db: Session = Depends(get_db),
                      page: Optional[int] = None,
                      limit: Optional[int] = None):
     try:
-        db_cities = City.get_list(db, page, limit)
+        db_cities, counter = City.get_list(db, page, limit)
         return {
-            'cities_count': len(db_cities),
+            'cities_count': counter,
             'cities': db_cities
         }
     except Exception as e:
@@ -54,9 +54,9 @@ async def get_airports(db: Session = Depends(get_db),
                        page: Optional[int] = None,
                        limit: Optional[int] = None):
     try:
-        db_airports = Airport.get_list(db, page, limit)
+        db_airports, counter = Airport.get_list(db, page, limit)
         return {
-            'airports_count': len(db_airports),
+            'airports_count': counter,
             'airports': db_airports
         }
     except Exception as e:
@@ -70,9 +70,9 @@ async def get_companies(db: Session = Depends(get_db),
                         page: Optional[int] = None,
                         limit: Optional[int] = None):
     try:
-        db_companies = Company.get_list(db, page, limit)
+        db_companies, counter = Company.get_list(db, page, limit)
         return {
-            'companies_count': len(db_companies),
+            'companies_count': counter,
             'companies': db_companies
         }
     except Exception as e:
@@ -86,10 +86,10 @@ async def get_flight_guide(db: Session = Depends(get_db),
                            page: Optional[int] = None,
                            limit: Optional[int] = None):
     try:
-        db_companies = FlightGuide.get_list(db, page, limit)
+        db_companies, counter = FlightGuide.get_list(db, page, limit)
         return {
-            'companies_count': len(db_companies),
-            'companies': db_companies
+            'flights_count': counter,
+            'flights': db_companies
         }
     except Exception as e:
         print(logging.error(e))

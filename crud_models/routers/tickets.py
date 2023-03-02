@@ -168,3 +168,15 @@ async def cancel_ticket_add_to_agent_fine(ticket_cancel: schemas.TicketCancel,
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
+
+
+# @routers.pots("ticket/reservation", tags=["tickets"])
+# async def reserve_ticket(flight_id: int):
+#     """ Reserve flight ticket on redis for 5 minutes """
+#     try:
+#         return Ticket.reserve_ticket(flight_id)
+#     except ValueError as e:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+#     except Exception as e:
+#         print(logging.error(e))
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")

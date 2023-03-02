@@ -9,9 +9,10 @@ from crud_models.schemas import airports as schemas
 class Airport:
     @staticmethod
     def get_list(db: Session, offset: Optional[int], limit: Optional[int]):
+        airport = db.query(models.Airport)
         if offset and limit:
-            return db.query(models.Airport).offset(limit * (offset - 1)).limit(limit).all()
-        return db.query(models.Airport).all()
+            return airport.offset(limit * (offset - 1)).limit(limit).all(), airport.count()
+        return airport.all(), airport.count()
 
     @staticmethod
     def get_by_id(db: Session, airport_id: int):

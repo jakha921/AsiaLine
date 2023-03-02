@@ -316,3 +316,19 @@ class Ticket:
         except Exception as e:
             print(logging.error(e))
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Ticket has trouble updating")
+
+
+    # create flight reservation set to redis for 5 minutes and return flight_id: True|False
+    @staticmethod
+    def create_reservation(db: Session, flight_id: int):
+        flight = db.query(models.Flight).filter(models.Flight.id == flight_id).first()
+
+        if flight is None:
+            raise HTTPException(status_code=404, detail="Flight not found")
+
+        if flight.left_seats == 0:
+            raise HTTPException(status_code=400, detail="No seats left")
+
+        redis = Redis()
+        redis.set(flight_id, True, ex=300)
+        return {flight_id: True}

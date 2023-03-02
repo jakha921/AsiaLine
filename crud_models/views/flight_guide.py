@@ -16,8 +16,9 @@ class FlightGuide:
     @staticmethod
     def get_list(db: Session, page: Optional[int], limit: Optional[int]):
         if page and limit:
-            return db.query(models.FlightGuide).offset(limit * (page - 1)).limit(limit).all()
-        return db.query(models.FlightGuide).all()
+            flight_guide = db.query(models.FlightGuide)
+            return flight_guide.offset(limit * (page - 1)).limit(limit).all(), flight_guide.count()
+        return db.query(models.FlightGuide).all(), db.query(models.FlightGuide).count()
 
     @staticmethod
     def get_by_id(db: Session, flight_guide_id: int):
