@@ -38,7 +38,7 @@ class CityUpdate(CityCreate):
     country_id: Optional[int]
 
 
-class City(CityCreate):
+class City(CityUpdate):
     id: int
     airports: list
 

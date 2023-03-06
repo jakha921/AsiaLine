@@ -22,7 +22,7 @@ async def get_countries(db: Session = Depends(get_db),
                         page: Optional[int] = None,
                         limit: Optional[int] = None):
     try:
-        db_countries, counter = Country.get_list(db, page, limit)
+        db_countries, counter = Country.get_list(db, page, limit, True)
         return {
             'countries_count': counter,
             'countries': db_countries
@@ -38,7 +38,7 @@ async def get_cities(db: Session = Depends(get_db),
                      page: Optional[int] = None,
                      limit: Optional[int] = None):
     try:
-        db_cities, counter = City.get_list(db, page, limit)
+        db_cities, counter = City.get_list(db, page, limit, True)
         return {
             'cities_count': counter,
             'cities': db_cities
@@ -54,7 +54,7 @@ async def get_airports(db: Session = Depends(get_db),
                        page: Optional[int] = None,
                        limit: Optional[int] = None):
     try:
-        db_airports, counter = Airport.get_list(db, page, limit)
+        db_airports, counter = Airport.get_list(db, page, limit, True)
         return {
             'airports_count': counter,
             'airports': db_airports

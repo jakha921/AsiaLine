@@ -107,7 +107,13 @@ class AgentDebt:
                  page: Optional[int],
                  limit: Optional[int],
                  db: Session):
-        query = db.query(models.AgentDebt).filter(models.AgentDebt.agent_id == agent_id)
+        query = db.query(models.Ticket.ticket_number, models.FlightGuide.flight_number,
+                         models.AgentDebt.type, models.AgentDebt.amount, models.AgentDebt.comment,
+                         models.AgentDebt.created_at).\
+            join(models.Ticket, models.AgentDebt.ticket_id == models.Ticket.id).\
+            join(models.Flight, models.Ticket.flight_id == models.Flight.id).\
+            join(models.FlightGuide, models.Flight.flight_guide_id == models.FlightGuide.id).\
+            filter(models.AgentDebt.agent_id == agent_id)
         if page and limit:
             return query.offset(limit * (page - 1)).limit(limit).all()
         return query.all()

@@ -6,6 +6,7 @@ from pydantic import BaseModel, validator
 class RefillCreate(BaseModel):
     receiver_id: int
     agent_id: int
+    payment_type_id: int
     amount: int
     comment: Optional[str]
 
@@ -35,6 +36,7 @@ class RefillCreate(BaseModel):
             "example": {
                 "receiver_id": 1,
                 "agent_id": 1,
+                "payment_type_id": 1,
                 "amount": 100000,
                 "comment": "Refill comment Optional[str]",
             }

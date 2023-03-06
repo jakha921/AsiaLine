@@ -16,6 +16,7 @@ from crud_models.routers.booking import routers as booking
 from crud_models.routers.scraped_price import routers as scraped_price
 from crud_models.routers.genders import routers as genders
 from crud_models.routers.refills import routers as refills
+from crud_models.routers.payments_type import routers as payments_type
 from crud_models.routers.ticket_classes import routers as ticket_classes
 # from db.db_redis import redis_client
 
@@ -110,6 +111,7 @@ app.include_router(booking)
 app.include_router(scraped_price)
 app.include_router(genders)
 app.include_router(refills)
+app.include_router(payments_type)
 app.include_router(ticket_classes)
 
 # pages

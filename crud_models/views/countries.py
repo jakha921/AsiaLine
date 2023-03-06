@@ -8,11 +8,18 @@ from crud_models.schemas import countries as schemas
 
 class Country:
     @staticmethod
-    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None):
+    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None, is_count=False):
         country = db.query(models.Country)
         if page and limit:
-            return country.offset(limit * (page - 1)).limit(limit).all(), country.count()
-        return country.all(), country.count()
+            if is_count:
+                return country.offset(limit * (page - 1)).limit(limit).all(), country.count()
+            else:
+                return country.offset(limit * (page - 1)).limit(limit).all()
+
+        if is_count:
+            return country.all(), country.count()
+        else:
+            return country.all()
 
     @staticmethod
     def get_by_id(db: Session, country_id: int):

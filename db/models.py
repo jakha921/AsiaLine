@@ -520,6 +520,18 @@ class CurrencyRate(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class PaymentType(Base):
+    __tablename__ = 'payment_types'
+
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    name_ru = Column(String(255), nullable=False)
+    name_en = Column(String(255), nullable=True)
+    name_uz = Column(String(255), nullable=True)
+
+    def __repr__(self):
+        return f"Type_of_refill(id={self.id}, name={self.name_ru})"
+
+
 class Refill(Base):
     __tablename__ = 'refills'
 
@@ -527,6 +539,7 @@ class Refill(Base):
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False)
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     amount = Column(Integer, default=0)
+    payment_type_id = Column(Integer, ForeignKey("payment_types.id"), nullable=False)
     comment = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -534,6 +547,7 @@ class Refill(Base):
 
     receiver = relationship("User", backref="refills")
     agent = relationship("Agent", backref="refills")
+    payment_type = relationship("PaymentType", backref="refills")
 
     def __repr__(self):
         return f"Refill(id={self.id}, agent={self.agent})"

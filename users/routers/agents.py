@@ -106,7 +106,7 @@ async def delete_agent(agent_id: int,
 
 
 # region Agent Debt
-@routers.get("/agent_debts/{agent_id}", response_model=list[schemas.AgentDebt], tags=['agents'])
+@routers.get("/agent_debts/{agent_id}", tags=['agents'])
 async def get_agent_debts(agent_id: int,
                           page: Optional[int] = None,
                           limit: Optional[int] = None,

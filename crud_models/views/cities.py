@@ -9,11 +9,15 @@ from crud_models.schemas import cities as schemas
 
 class City:
     @staticmethod
-    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None):
+    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None, is_count: bool = False):
         city = db.query(models.City)
         if page and limit:
-            return city.offset(limit * (page - 1)).limit(limit).all(), city.count()
-        return city.all(), city.count()
+            if is_count:
+                return city.offset(limit * (page - 1)).limit(limit).all(), city.count()
+            return city.offset(limit * (page - 1)).limit(limit).all()
+        if is_count:
+            return city.all(), city.count()
+        return city.all()
 
     @staticmethod
     def get_by_id(db: Session, city_id: int):
