@@ -539,7 +539,7 @@ class Refill(Base):
     agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False)
     receiver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     amount = Column(Integer, default=0)
-    payment_type_id = Column(Integer, ForeignKey("payment_types.id"), nullable=False)
+    payment_type_id = Column(Integer, ForeignKey("payment_types.id"), nullable=True)
     comment = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
