@@ -8,12 +8,19 @@ class FlightGuideCreate(BaseModel):
     from_airport_id: int
     to_airport_id: int
     luggage: Optional[int]
+    baggage_weight: Optional[int]
 
     # region Validators
     @validator('luggage')
     def luggage_must_be_equal_or_greater_than_0(cls, v):
         if v < 0:
             raise ValueError('luggage must be equal or greater than 0')
+        return v
+
+    @validator('baggage_weight')
+    def baggage_weight_must_be_equal_or_greater_than_0(cls, v):
+        if v < 0:
+            raise ValueError('baggage_weight must be equal or greater than 0')
         return v
 
     # endregion
@@ -25,7 +32,8 @@ class FlightGuideCreate(BaseModel):
                 "flight_number": "WZ 1234",
                 "from_airport_id": 1,
                 "to_airport_id": 2,
-                "luggage": 0
+                "luggage": 0,
+                "baggage_weight": 0
             }
         }
 

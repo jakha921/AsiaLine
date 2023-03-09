@@ -14,11 +14,15 @@ from crud_models.schemas import flight_guide as schemas
 
 class FlightGuide:
     @staticmethod
-    def get_list(db: Session, page: Optional[int], limit: Optional[int]):
+    def get_list(db: Session, page: Optional[int], limit: Optional[int], is_count: bool = False):
         if page and limit:
             flight_guide = db.query(models.FlightGuide)
-            return flight_guide.offset(limit * (page - 1)).limit(limit).all(), flight_guide.count()
-        return db.query(models.FlightGuide).all(), db.query(models.FlightGuide).count()
+            if is_count:
+                return flight_guide.offset(limit * (page - 1)).limit(limit).all(), flight_guide.count()
+            return flight_guide.offset(limit * (page - 1)).limit(limit).all()
+        if is_count:
+            return db.query(models.FlightGuide).all(), db.query(models.FlightGuide).count()
+        return db.query(models.FlightGuide).all()
 
     @staticmethod
     def get_by_id(db: Session, flight_guide_id: int):

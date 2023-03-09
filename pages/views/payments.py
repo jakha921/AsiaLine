@@ -22,10 +22,17 @@ def get_refill_by_agent_id(db: Session, from_date, to_date, agent_id=None, page=
                     json_build_object( \
                         'id', u.id, \
                         'username', u.username \
-                    ) AS receiver \
+                    ) AS receiver, \
+                    json_build_object( \
+                        'id', pt.id, \
+                        'name_ru', pt.name_ru, \
+                        'name_en', pt.name_en, \
+                        'name_uz', pt.name_uz \
+                    ) AS payment_type \
                 FROM refills AS r \
                 JOIN agents AS a ON r.agent_id = a.id \
                 JOIN users AS u ON r.receiver_id = u.id \
+                JOIN payment_types AS pt ON r.payment_type_id = pt.id \
                 WHERE r.deleted_at IS NULL "
 
         if from_date and to_date:
