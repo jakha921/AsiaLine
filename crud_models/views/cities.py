@@ -9,14 +9,10 @@ from crud_models.schemas import cities as schemas
 
 class City:
     @staticmethod
-    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None, is_count: bool = False):
+    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None):
         city = db.query(models.City)
         if page and limit:
-            if is_count:
-                return city.offset(limit * (page - 1)).limit(limit).all(), city.count()
             return city.offset(limit * (page - 1)).limit(limit).all()
-        if is_count:
-            return city.all(), city.count()
         return city.all()
 
     @staticmethod
@@ -46,3 +42,33 @@ class City:
         db.delete(db_city)
         db.commit()
         return db_city
+
+    @staticmethod
+    def get_with_countries(db: Session, page: Optional[int] = None, limit: Optional[int] = None,
+                           searching_text: Optional[str] = None):
+        query = f"SELECT c.id, c.city_ru, c.city_en, c.city_uz, c.code as  city_code, \
+                json_build_object( \
+                'id', co.id, \
+                'country_ru', co.country_ru, \
+                'country_en', co.country_en, \
+                'country_uz', co.country_uz, \
+                'code', co.code \
+                ) as country \
+                FROM cities AS c \
+                LEFT JOIN countries AS co ON c.country_id = co.id "\
+
+        if searching_text:
+            searching_text = searching_text.lower()
+            query += f"WHERE (LOWER(c.city_ru) LIKE '%{searching_text}%' \
+                    OR LOWER(c.city_en) LIKE '%{searching_text}%' \
+                    OR LOWER(c.city_uz) LIKE '%{searching_text}%' \
+                    OR LOWER(co.country_ru) LIKE '%{searching_text}%' \
+                    OR LOWER(co.country_en) LIKE '%{searching_text}%' \
+                    OR LOWER(co.country_uz) LIKE '%{searching_text}%')"
+
+        counter = db.execute(query).fetchall()
+
+        if page and limit:
+            query += f" OFFSET {limit * (page - 1)} LIMIT {limit}"
+
+        return db.execute(query).fetchall(), len(counter)

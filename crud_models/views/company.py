@@ -7,8 +7,16 @@ from crud_models.schemas import company as schemas
 
 class Company:
     @staticmethod
-    def get_list(db: Session, page: Optional[int], limit: Optional[int]):
+    def get_list(db: Session, page: Optional[int], limit: Optional[int], search: Optional[str] = None):
         country = db.query(models.Company)
+
+        if search:
+            search = search.lower()
+            country = country.filter(
+                (models.Company.name.ilike(f"%{search}%")) |
+                (models.Company.code.ilike(f"%{search}%")) |
+                (models.Company.description.ilike(f"%{search}%")))
+
         if page and limit:
             return country.offset(limit * (page - 1)).limit(limit).all(), country.count()
         return country.all(), country.count()

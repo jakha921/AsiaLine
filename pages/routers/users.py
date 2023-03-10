@@ -22,10 +22,10 @@ async def get_users(db: Session = Depends(get_db),
     # if not check_permissions('users_main', jwt):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_users = users.get_all_users_with_role(db, page, limit, searching_text)
+        db_users, counter = users.get_all_users_with_role(db, page, limit, searching_text)
 
         return {
-            'users_count': len(db_users),
+            'users_count': counter,
             'users': db_users
         }
     except Exception as e:
@@ -44,9 +44,9 @@ async def get_roles(db: Session = Depends(get_db),
     # if not check_permissions('users_roles', jwt):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_roles = users.get_all_roles(db, page=page, limit=limit, search_text=searching_text)
+        db_roles, counter = users.get_all_roles(db, page=page, limit=limit, search_text=searching_text)
         return {
-            # 'count_roles': len(db_roles),
+            'roles_count': counter,
             'roles': db_roles
         }
     except Exception as e:

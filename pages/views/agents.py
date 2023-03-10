@@ -29,11 +29,13 @@ def get_agents_discounts(db: Session, agent_id, page: int, limit: int, searching
         if searching_text and searching_text.isdigit():
             query += f"AND d.amount = {searching_text} "
 
+        counter = db.execute(query).fetchall()
+
         query += f"ORDER BY a.balance "
         if limit and page:
             query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-        return db.execute(text(query)).fetchall()
+        return db.execute(query).fetchall(), len(counter)
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
@@ -51,11 +53,13 @@ def get_discounts(db: Session, searching_text, page: int, limit: int):
         if searching_text and searching_text.isdigit():
             query += f"WHERE d.amount = {searching_text} "
 
+        counter = db.execute(query).fetchall()
+
         query += f"ORDER BY d.amount "
         if page and limit:
             query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-        return db.execute(text(query)).fetchall()
+        return db.execute(query).fetchall(), len(counter)
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))

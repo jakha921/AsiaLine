@@ -25,11 +25,13 @@ def get_all_users_with_role(db: Session, page: int, limit: int, search_text=None
                             OR r.title_en LIKE '%{search_text}%' \
                             OR r.title_uz LIKE '%{search_text}%') "
 
+        counter = db.execute(query).fetchall()
+
         query += f"ORDER BY u.id "
         if limit and page:
             query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-        return db.execute(text(query)).fetchall()
+        return db.execute(text(query)).fetchall(), len(counter)
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))
@@ -49,11 +51,13 @@ def get_all_roles(db: Session, page: int, limit: int, search_text=None):
                             OR r.title_en LIKE '%{search_text}%' \
                             OR r.title_uz LIKE '%{search_text}%' "
 
+        counter = db.execute(query).fetchall()
+
         if limit is not None and page is not None:
             query += f"ORDER BY r.id \
                     LIMIT {limit} OFFSET {limit * (page - 1)}"
 
-        return db.execute(text(query)).fetchall()
+        return db.execute(text(query)).fetchall(), len(counter)
     except Exception as e:
         print(logging.error(traceback.format_exc()))
         print(logging.error(e))

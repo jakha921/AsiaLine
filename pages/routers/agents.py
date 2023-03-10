@@ -7,6 +7,7 @@ from auth.auth_token.auth_bearer import JWTBearer
 from auth.auth_token.auth_handler import check_permissions
 from db.database import get_db
 from pages.views import agents
+from pages.views.currency import get_currency_last_item
 
 routers = APIRouter()
 
@@ -24,8 +25,12 @@ async def get_agents(db: Session = Depends(get_db),
     # if not check_permissions('agents_main', jwt):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        db_agents = agents.get_agents_discounts(db, agent_id, page, limit, searching_text)
-        return db_agents
+        db_agents, counter = agents.get_agents_discounts(db, agent_id, page, limit, searching_text)
+        return {
+            "currency": get_currency_last_item(db),
+            'agents_count': counter,
+            'agents': db_agents
+        }
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
@@ -42,7 +47,11 @@ async def get_discounts(db: Session = Depends(get_db),
     # if not check_permissions('agents_discounts', jwt):
     #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
-        return agents.get_discounts(db, searching_text, page, limit)
+        agent_discount, counter = agents.get_discounts(db, searching_text, page, limit)
+        return {
+            'agent_count': counter,
+            'agent': agent_discount
+        }
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")

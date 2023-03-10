@@ -8,18 +8,11 @@ from crud_models.schemas import countries as schemas
 
 class Country:
     @staticmethod
-    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None, is_count=False):
+    def get_list(db: Session, page: Optional[int] = None, limit: Optional[int] = None):
         country = db.query(models.Country)
         if page and limit:
-            if is_count:
-                return country.offset(limit * (page - 1)).limit(limit).all(), country.count()
-            else:
-                return country.offset(limit * (page - 1)).limit(limit).all()
-
-        if is_count:
-            return country.all(), country.count()
-        else:
-            return country.all()
+            return country.offset(limit * (page - 1)).limit(limit).all()
+        return country.all()
 
     @staticmethod
     def get_by_id(db: Session, country_id: int):
@@ -48,3 +41,20 @@ class Country:
         db.delete(db_country)
         db.commit()
         return db_country
+
+    @staticmethod
+    def get_countries(db: Session, page: Optional[int] = None, limit: Optional[int] = None,
+                      search: Optional[str] = None):
+        query = f"SELECT * FROM countries AS c "
+        if search:
+            search = search.lower()
+            query += f"WHERE (LOWER(c.country_ru) LIKE '%{search}%' \
+                OR LOWER(c.country_en) LIKE '%{search}%' \
+                OR LOWER(c.country_uz) LIKE '%{search}%') "
+
+        country = db.execute(query).fetchall()
+
+        if page and limit:
+            query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
+
+        return db.execute(query).fetchall(), len(country)

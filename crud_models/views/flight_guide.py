@@ -14,14 +14,10 @@ from crud_models.schemas import flight_guide as schemas
 
 class FlightGuide:
     @staticmethod
-    def get_list(db: Session, page: Optional[int], limit: Optional[int], is_count: bool = False):
+    def get_list(db: Session, page: Optional[int], limit: Optional[int]):
+        flight_guide = db.query(models.FlightGuide)
         if page and limit:
-            flight_guide = db.query(models.FlightGuide)
-            if is_count:
-                return flight_guide.offset(limit * (page - 1)).limit(limit).all(), flight_guide.count()
             return flight_guide.offset(limit * (page - 1)).limit(limit).all()
-        if is_count:
-            return db.query(models.FlightGuide).all(), db.query(models.FlightGuide).count()
         return db.query(models.FlightGuide).all()
 
     @staticmethod
@@ -55,3 +51,32 @@ class FlightGuide:
         db.delete(db_flight_guide)
         db.commit()
         return {"message": "Flight guide deleted"}
+
+    @staticmethod
+    def get_detail_flight_guide(db: Session, page: Optional[int], limit: Optional[int], search: Optional[str] = None):
+        query = f"SELECT fg.id, fg.flight_number, \
+            json_build_object('id', c.id, 'name', c.name, 'code', c.code, 'description', c.description) as company, \
+            json_build_object('id', a1.id, 'name_ru', a1.airport_ru, 'name_en', a1.airport_en, 'name_uz', a1.airport_uz,\
+            'code', a1.code) as airport_from, \
+            json_build_object('id', a2.id, 'name_ru', a2.airport_ru, 'name_en', a2.airport_en,'name_en', a1.airport_en, \
+            'code', a2.code) as airport_to, \
+            fg.luggage, fg.baggage_weight \
+            FROM flight_guides AS fg \
+            JOIN companies AS c ON fg.company_id = c.id \
+            JOIN airports AS a1 ON fg.from_airport_id = a1.id \
+            JOIN airports AS a2 ON fg.to_airport_id = a2.id "
+
+        if search:
+            search = search.lower()
+            query += f"WHERE LOWER(fg.flight_number) LIKE '%{search}%' \
+                OR LOWER(c.name) LIKE '%{search}%' \
+                OR LOWER(a1.code) LIKE '%{search}%' \
+                OR LOWER(a2.code) LIKE '%{search}%' "
+
+        counter = db.execute(query).fetchall()
+
+        if page and limit:
+            query += f" OFFSET {limit * (page - 1)} LIMIT {limit}"
+
+        return db.execute(query).fetchall(), len(counter)
+

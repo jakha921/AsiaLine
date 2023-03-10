@@ -25,7 +25,8 @@ async def get_companies(company_id: Optional[int] = None,
 
     try:
         if company_id is None:
-            return Company.get_list(db, page, limit)
+            company, counter = Company.get_list(db, page, limit)
+            return company
         else:
             db_company = Company.get_by_id(db, company_id)
             if db_company is None:
