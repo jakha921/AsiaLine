@@ -52,3 +52,24 @@ async def get_roles(db: Session = Depends(get_db),
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
+
+
+@routers.get("/users/history")
+async def get_history(db: Session = Depends(get_db),
+                        searching_text: Optional[str] = None,
+                        page: Optional[int] = None,
+                        limit: Optional[int] = None,
+                        # jwt: dict = Depends(JWTBearer())
+                        ):
+        """ get all history of users """
+        # if not check_permissions('users_history', jwt):
+        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        try:
+            db_history, counter = users.get_all_history(db, page=page, limit=limit, search_text=searching_text)
+            return {
+                'history_count': counter,
+                'history': db_history
+            }
+        except Exception as e:
+            print(logging.error(e))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")

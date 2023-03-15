@@ -12,7 +12,7 @@ from users.views.agents import Agent, AgentDebt
 routers = APIRouter()
 
 
-@routers.get("/agents", response_model=list[schemas.Agent], tags=["agents"])
+@routers.get("/agents", tags=["agents"])
 async def get_agents_list(page: Optional[int] = None,
                           limit: Optional[int] = None,
                           jwt: dict = Depends(JWTBearer()),
@@ -38,7 +38,7 @@ async def get_agent(agent_id: int,
         db_agent = Agent.get_by_id(db, agent_id)
         if db_agent is None:
             raise ValueError("Agent not found")
-        return schemas.Agent.from_orm(db_agent)
+        return db_agent
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
@@ -73,12 +73,13 @@ async def update_agent(agent_id: int,
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     try:
-        db_agent = Agent.get_by_id(db, agent_id)
-        if db_agent is None:
+        db_agent = Agent.get_by_id_without_join(db, agent_id)
+        old_agent, old_user = db_agent
+        if old_agent is None:
             raise ValueError("Agent not found")
-        if agent.email and Agent.get_by_email(db, agent.email):
+        if old_user.email != agent.email and Agent.get_by_email(db, agent.email):
             raise ValueError("This user is already an agent")
-        return schemas.Agent.from_orm(Agent.update(db, db_agent, agent))
+        return Agent.update(db, db_agent, agent)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except Exception as e:
@@ -94,10 +95,10 @@ async def delete_agent(agent_id: int,
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     try:
-        db_agent = Agent.get_by_id(db, agent_id)
-        if db_agent is None:
+        db_agent = Agent.get_by_id_without_join(db, agent_id)
+        if db_agent[0] is None:
             raise ValueError("Agent not found")
-        return Agent.delete(db, db_agent)
+        return Agent.delete(db, db_agent[0])
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:

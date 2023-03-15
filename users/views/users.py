@@ -23,9 +23,9 @@ class User:
     def get_by_id(db: Session,
                   user_id: int):
         user = db.query(models.User).filter(models.User.id == user_id).first()
-        if user:
+        # if user:
             # decode user password
-            user.password = decode_password(user.password)
+            # user.password = decode_password(user.password)
         return user
 
     @staticmethod
@@ -48,7 +48,7 @@ class User:
     def update(db: Session, user_id: int, user: schemas.UserUpdate):
         db_user = db.query(models.User).filter(models.User.id == user_id).first()
         #    hash password and save user
-        if db_user.password != encode_password(user.password):
+        if user.password is not None and db_user.password != encode_password(user.password):
             user.password = encode_password(user.password)
         for key, value in user.dict().items():
             if value is not None:

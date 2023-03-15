@@ -49,6 +49,7 @@ async def get_discounts(db: Session = Depends(get_db),
     try:
         agent_discount, counter = agents.get_discounts(db, searching_text, page, limit)
         return {
+            "currency": get_currency_last_item(db),
             'agent_count': counter,
             'agent': agent_discount
         }

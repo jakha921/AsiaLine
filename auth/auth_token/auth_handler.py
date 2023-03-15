@@ -63,6 +63,7 @@ permission = [
     'payments_agents_balance',
     'agents_main',
     'agents_discounts',
+    'users_history',
 ]
 
 
