@@ -18,9 +18,8 @@ def user_login(user: schemas.UserLoginSchema, db: Session = Depends(get_db)):
 
     query = User.get_by_email(db, user.email)
     try:
-        if query:
-            if decode_password(query.password) == user.password:
-                return sign_jwt(id=query.id, email=query.email, permissions=User.get_permissions(db, query.id))
+        if query and decode_password(query.password) == user.password:
+            return sign_jwt(id=query.id, email=query.email, permissions=User.get_permissions(db, query.id))
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

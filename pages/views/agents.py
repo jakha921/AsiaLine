@@ -22,16 +22,13 @@ def get_agents_discounts(db: Session, agent_id, page: int, limit: int, searching
             query += f"AND a.id = {agent_id} "
 
         if searching_text and not searching_text.isdigit():
-            query += f"AND (a.company_name LIKE '%{searching_text}%' \
-                        OR u.email LIKE '%{searching_text}%' \
+            query += f"AND (LOWER(a.company_name) LIKE '%{searching_text}%' \
+                        OR LOWER(u.email) LIKE '%{searching_text}%' \
                         OR d.name LIKE '%{searching_text}%') "
-
-        if searching_text and searching_text.isdigit():
-            query += f"AND d.amount = {searching_text} "
 
         counter = db.execute(query).fetchall()
 
-        query += f"ORDER BY a.balance "
+        query += f"ORDER BY a.id "
         if limit and page:
             query += f"LIMIT {limit} OFFSET {limit * (page - 1)}"
 
@@ -47,11 +44,10 @@ def get_discounts(db: Session, searching_text, page: int, limit: int):
         query = f"SELECT d.id, d.name, d.amount \
                 FROM discounts AS d "
 
-        if searching_text and not searching_text.isdigit():
-            query += f"WHERE d.name LIKE '%{searching_text}%' "
-
-        if searching_text and searching_text.isdigit():
-            query += f"WHERE d.amount = {searching_text} "
+        if searching_text is not None:
+            searching_text = searching_text.lower()
+            query += f"WHERE (LOWER(d.name) LIKE '%{searching_text}%' \
+                            OR d.amount::text LIKE '%{searching_text}%') "
 
         counter = db.execute(query).fetchall()
 

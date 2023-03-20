@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import Depends, APIRouter, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -56,20 +58,23 @@ async def get_roles(db: Session = Depends(get_db),
 
 @routers.get("/users/history")
 async def get_history(db: Session = Depends(get_db),
-                        searching_text: Optional[str] = None,
-                        page: Optional[int] = None,
-                        limit: Optional[int] = None,
-                        # jwt: dict = Depends(JWTBearer())
-                        ):
-        """ get all history of users """
-        # if not check_permissions('users_history', jwt):
-        #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-        try:
-            db_history, counter = users.get_all_history(db, page=page, limit=limit, search_text=searching_text)
-            return {
-                'history_count': counter,
-                'history': db_history
-            }
-        except Exception as e:
-            print(logging.error(e))
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
+                      searching_text: Optional[str] = None,
+                      user_id: Optional[int] = None,
+                      from_date: Optional[date] = None,
+                      to_date: Optional[date] = None,
+                      page: Optional[int] = None,
+                      limit: Optional[int] = None,
+                      # jwt: dict = Depends(JWTBearer())
+                      ):
+    """ get all history of users """
+    # if not check_permissions('users_history', jwt):
+    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    try:
+        db_history, counter = users.get_all_history(db, page, limit, searching_text, user_id, from_date, to_date)
+        return {
+            'history_count': counter,
+            'history': db_history
+        }
+    except Exception as e:
+        print(logging.error(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")

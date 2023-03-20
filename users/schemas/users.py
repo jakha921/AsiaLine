@@ -4,6 +4,9 @@ import re
 from pydantic import BaseModel, EmailStr, validator, Field
 from typing import Optional
 
+from users.schemas.roles import Role
+
+
 # EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9.+/=?_-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$")
 
 
@@ -79,14 +82,16 @@ class UserUpdate(UserCreate):
         }
 
 
-class User(UserCreate):
-    id: Optional[int]
+class User(BaseModel):
+    id: int
+    username: Optional[str]
+    role: Role
     email: Optional[EmailStr]
-    password: Optional[str] = None
+    # password: Optional[str] = None
     phone: Optional[str]
+    language: Optional[str] = Field(default="ru", max_length=2)
     date_joined: Optional[datetime]
     last_login: Optional[datetime]
-
     class Config:
         orm_mode = True
         schema_extra = {

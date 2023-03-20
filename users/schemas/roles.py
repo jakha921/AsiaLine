@@ -8,6 +8,7 @@ class RoleCreate(BaseModel):
     title_en: Optional[str]
     title_uz: Optional[str]
     description: Optional[str]
+    permissions: Optional[list]
 
     class Config:
         schema_extra = {
@@ -16,7 +17,8 @@ class RoleCreate(BaseModel):
                 "title_ru": "Администратор",
                 "title_en": "Administrator",
                 "title_uz": "Administrator",
-                "description": "Роль для администратора"
+                "description": "Роль для администратора",
+                "permissions": [1, 2, 3]
             }
         }
 
@@ -26,14 +28,25 @@ class RoleUpdate(RoleCreate):
     title_ru: Optional[str]
 
 
-class Role(RoleCreate):
+class Role(BaseModel):
     id: int
+    name: Optional[str]
+    title_ru: Optional[str]
+    title_en: Optional[str]
+    title_uz: Optional[str]
+    description: Optional[str]
+    permissions: Optional[list]
 
     class Config:
         orm_mode = True
         schema_extra = {
             "example": {
                 "id": 1,
-                **RoleCreate.Config.schema_extra.get("example"),
+                "name": "admin",
+                "title_ru": "Администратор",
+                "title_en": "Administrator",
+                "title_uz": "Administrator",
+                "description": "Роль для администратора",
+                "permissions": [1, 2, 3]
             }
         }
