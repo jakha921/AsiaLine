@@ -29,6 +29,8 @@ from users.routers.role_permissions import routers as role_permissions
 from users.routers.agents import routers as agents
 from users.routers.discounts import routers as discounts
 
+from notifications.routers import routers as notifications
+
 from pages.routers.currency import routers as currency
 from pages.routers.main import routers as main_page
 from pages.routers.flights import routers as flights_page
@@ -37,7 +39,6 @@ from pages.routers.users import routers as users_page
 from pages.routers.payments import routers as payments_page
 from pages.routers.agents import routers as agents_page
 from pages.routers.guides import routers as guides_page
-
 
 from db.database import SessionLocal
 
@@ -113,6 +114,9 @@ app.include_router(genders)
 app.include_router(refills)
 app.include_router(payments_type)
 app.include_router(ticket_classes)
+
+# notifications
+app.include_router(notifications)
 
 # pages
 app.include_router(currency)

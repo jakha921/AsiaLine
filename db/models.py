@@ -47,6 +47,22 @@ class User(Base):
         return f"User(id={self.id}, email={self.email}, username={self.username}, role_id={self.role_id})"
 
 
+class UserNotification(Base):
+    __tablename__ = "user_notifications"
+
+    id = Column(Integer, primary_key=True, index=True, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    action = Column(Enum("start_sale", "sold", "delete", name="Notification"), nullable=False)
+    message = Column(String(255), nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", backref="notifications")
+
+    def __repr__(self):
+        return f"UserNotification(id={self.id}, user_id={self.user_id}, message={self.message}, is_read={self.is_read})"
+
+
 class UserHistory(Base):
     __tablename__ = "user_history"
 
@@ -289,7 +305,7 @@ class Flight(Base):
     flight_guide = relationship("FlightGuide", backref="flights")
 
     def __repr__(self):
-        return f"Flight(id={self.id}, flight_number={self.flight_number}, departure_date={self.departure_date}, " \
+        return f"Flight(id={self.id}, departure_date={self.departure_date}, " \
                f"arrival_date={self.arrival_date}, price={self.price}, currency={self.currency}, " \
                f"total_seats={self.total_seats}, left_seats={self.left_seats}, on_sale={self.on_sale})"
 
