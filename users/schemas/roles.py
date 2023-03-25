@@ -3,7 +3,7 @@ from typing import Optional
 
 
 class RoleCreate(BaseModel):
-    name: str
+    name: str = "Some name"
     title_ru: str
     title_en: Optional[str]
     title_uz: Optional[str]
@@ -13,7 +13,7 @@ class RoleCreate(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "name": "admin",
+                # "name": "admin",
                 "title_ru": "Администратор",
                 "title_en": "Administrator",
                 "title_uz": "Administrator",
@@ -30,7 +30,7 @@ class RoleUpdate(RoleCreate):
 
 class Role(BaseModel):
     id: int
-    name: Optional[str]
+    # name: Optional[str]
     title_ru: Optional[str]
     title_en: Optional[str]
     title_uz: Optional[str]
@@ -42,7 +42,7 @@ class Role(BaseModel):
         schema_extra = {
             "example": {
                 "id": 1,
-                "name": "admin",
+                # "name": "admin",
                 "title_ru": "Администратор",
                 "title_en": "Administrator",
                 "title_uz": "Administrator",
