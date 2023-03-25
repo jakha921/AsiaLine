@@ -18,7 +18,7 @@ from crud_models.routers.genders import routers as genders
 from crud_models.routers.refills import routers as refills
 from crud_models.routers.payments_type import routers as payments_type
 from crud_models.routers.ticket_classes import routers as ticket_classes
-from db.db_redis import redis_client
+# from db.db_redis import redis_client
 
 from users.routers.auth_token import routers as auth_token
 from users.routers.roles import routers as roles
