@@ -22,11 +22,11 @@ async def get_tickets(db: Session = Depends(get_db),
                       to_date: Optional[date] = None,
                       page: Optional[int] = None,
                       limit: Optional[int] = None,
-                      # jwt: dict = Depends(JWTBearer())
+                      jwt: dict = Depends(JWTBearer())
                       ):
     """ get all payments who paid amount of agents for fill the balance """
-    # if not check_permissions('payments_main', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_refills', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_payments, counter = payments.get_refill_by_agent_id(db, from_date, to_date, agent_id, page, limit, searching_text)
         return {
@@ -44,11 +44,10 @@ async def get_agent_balances(db: Session = Depends(get_db),
                              agent_id: Optional[int] = None,
                              page: Optional[int] = None,
                              limit: Optional[int] = None,
-                             # jwt: dict = Depends(JWTBearer())
-                             ):
+                             jwt: dict = Depends(JWTBearer())):
     """ Get all agent balances or by agent id """
-    # if not check_permissions('payments_agents_balance', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_agents_balance', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_agent_balances, counter = payments.get_agents_balance(db, agent_id, page, limit)
     return {
         'currency': get_currency_last_item(db),

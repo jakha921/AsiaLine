@@ -24,7 +24,7 @@ async def get_tickets(db: Session = Depends(get_db),
                       jwt: dict = Depends(JWTBearer())
                       ):
     """ Get tickets by flights where departure date is not past now """
-    if not check_permissions('tickets_page', jwt):
+    if not check_permissions('get_tickets', jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_tickets, counter = get_tickets_by_flight(db, from_date=from_date, to_date=to_date,

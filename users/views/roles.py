@@ -68,7 +68,6 @@ class Role:
             permissions.append(perm)
 
         result = {}
-        print(db_role)
         for key, value in db_role.__dict__.items():
             if key != 'permissions':
                 result[key] = value

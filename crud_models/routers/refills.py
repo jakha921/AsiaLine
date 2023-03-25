@@ -15,11 +15,7 @@ routers = APIRouter()
 @routers.get("/refills", response_model=list[schemas.Refill], tags=['refills'])
 async def get_refills(page: Optional[int] = None,
                       limit: Optional[int] = None,
-                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
-    if not check_permissions('get_refills', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
     try:
         return Refill.get_list(db, page, limit)
     except Exception as e:
@@ -29,10 +25,7 @@ async def get_refills(page: Optional[int] = None,
 
 @routers.get("/refill/{refill_id}", tags=['refills'])
 async def get_refill(refill_id: int,
-                     jwt: dict = Depends(JWTBearer()),
                      db: Session = Depends(get_db)):
-    if not check_permissions('get_refill', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_refill = Refill.get_by_id(db, refill_id)
         if db_refill is None:

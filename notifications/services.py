@@ -55,12 +55,11 @@ class NotificationService:
                         NotificationService.set_notification(db, admin[0], str(notification), "start_sale")
 
     @staticmethod
-    def get_notifications(db: Session, page: int, limit: int):
+    def get_notifications(db: Session, user_id: int):
         NotificationService.get_start_sale_flights(db)
-        query = db.query(models.UserNotification).filter(models.UserNotification.is_read == False)
-        if page and limit:
-            return query.offset(limit * (page - 1)).limit(limit).all()
-        return query.all()
+        return db.query(models.UserNotification).filter(models.UserNotification.is_read == False,
+                                                        models.UserNotification.user_id == user_id).order_by(
+            models.UserNotification.created_at).all()
 
     @staticmethod
     def update_notification(db: Session, notification: schemas.NotificationUpdate):

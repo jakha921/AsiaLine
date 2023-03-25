@@ -19,14 +19,10 @@ routers = APIRouter()
 @routers.get("/tickets", response_model=list[schemas.Ticket], tags=["tickets"])
 async def get_tickets(page: Optional[int] = None,
                       limit: Optional[int] = None,
-                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
     """
     Get all tickets where ticket and flight are not deleted and flight departure date is greater than current date
     """
-    if not check_permissions("get_tickets", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         return Ticket.get_list(db, page, limit)
     except Exception as e:
@@ -36,13 +32,9 @@ async def get_tickets(page: Optional[int] = None,
 
 @routers.get("/ticket/{ticket_id}", response_model=schemas.Ticket, tags=["tickets"])
 async def get_ticket(ticket_id: int,
-                     jwt: dict = Depends(JWTBearer()),
                      db: Session = Depends(get_db)):
     """ Get ticket by id where ticket and flight are not deleted and flight departure date is greater
     than current date """
-    if not check_permissions("get_ticket", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         db_ticket = Ticket.get_by_id(db, ticket_id)
         if db_ticket is None:
@@ -54,13 +46,9 @@ async def get_ticket(ticket_id: int,
 
 @routers.get("/ticket/details/{ticket_id}", tags=["tickets"])
 async def get_ticket_details(ticket_id: int,
-                                jwt: dict = Depends(JWTBearer()),
                                 db: Session = Depends(get_db)):
         """ Get ticket details by id where ticket and flight are not deleted and flight departure date is greater
         than current date """
-        if not check_permissions("get_ticket_details", jwt):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
         try:
             db_ticket = Ticket.get_details_by_id(db, ticket_id)
             if db_ticket is None:
@@ -168,15 +156,3 @@ async def cancel_ticket_add_to_agent_fine(ticket_cancel: schemas.TicketCancel,
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
-
-
-# @routers.pots("ticket/reservation", tags=["tickets"])
-# async def reserve_ticket(flight_id: int):
-#     """ Reserve flight ticket on redis for 5 minutes """
-#     try:
-#         return Ticket.reserve_ticket(flight_id)
-#     except ValueError as e:
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-#     except Exception as e:
-#         print(logging.error(e))
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")

@@ -18,11 +18,10 @@ async def get_users(db: Session = Depends(get_db),
                     searching_text: Optional[str] = None,
                     page: Optional[int] = None,
                     limit: Optional[int] = None,
-                    # jwt: dict = Depends(JWTBearer())
-                    ):
+                    jwt: dict = Depends(JWTBearer())):
     """ get all users with then roles """
-    # if not check_permissions('users_main', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_users', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_users, counter = users.get_all_users_with_role(db, page, limit, searching_text)
 
@@ -40,11 +39,11 @@ async def get_roles(db: Session = Depends(get_db),
                     searching_text: Optional[str] = None,
                     page: Optional[int] = None,
                     limit: Optional[int] = None,
-                    # jwt: dict = Depends(JWTBearer())
+                    jwt: dict = Depends(JWTBearer())
                     ):
     """ get all roles that can be assigned to users """
-    # if not check_permissions('users_roles', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_roles', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_roles, counter = users.get_all_roles(db, page=page, limit=limit, search_text=searching_text)
         return {
@@ -64,11 +63,11 @@ async def get_history(db: Session = Depends(get_db),
                       to_date: Optional[date] = None,
                       page: Optional[int] = None,
                       limit: Optional[int] = None,
-                      # jwt: dict = Depends(JWTBearer())
+                      jwt: dict = Depends(JWTBearer())
                       ):
     """ get all history of users """
-    # if not check_permissions('users_history', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_user_history', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_history, counter = users.get_all_history(db, page, limit, searching_text, user_id, from_date, to_date)
         return {

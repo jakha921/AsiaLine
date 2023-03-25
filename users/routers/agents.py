@@ -15,11 +15,7 @@ routers = APIRouter()
 @routers.get("/agents", tags=["agents"])
 async def get_agents_list(page: Optional[int] = None,
                           limit: Optional[int] = None,
-                          jwt: dict = Depends(JWTBearer()),
                           db: Session = Depends(get_db)):
-    if not check_permissions('get_agents', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
     try:
         return Agent.get_list(page, limit, db)
     except Exception as e:
@@ -29,11 +25,7 @@ async def get_agents_list(page: Optional[int] = None,
 
 @routers.get("/agent/{agent_id}", tags=["agents"])
 async def get_agent(agent_id: int,
-                    jwt: dict = Depends(JWTBearer()),
                     db: Session = Depends(get_db)):
-    if not check_permissions('get_agent', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
     try:
         db_agent = Agent.get_by_id(db, agent_id)
         if db_agent is None:
@@ -106,7 +98,7 @@ async def delete_agent(agent_id: int,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
 
 
-# region Agent Debt
+# Agent Debt
 @routers.get("/agent_debts/{agent_id}", tags=['agents'])
 async def get_agent_debts(agent_id: int,
                           page: Optional[int] = None,
@@ -117,5 +109,3 @@ async def get_agent_debts(agent_id: int,
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
-
-# endregion

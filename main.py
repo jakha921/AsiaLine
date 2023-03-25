@@ -18,7 +18,7 @@ from crud_models.routers.genders import routers as genders
 from crud_models.routers.refills import routers as refills
 from crud_models.routers.payments_type import routers as payments_type
 from crud_models.routers.ticket_classes import routers as ticket_classes
-# from db.db_redis import redis_client
+from db.db_redis import redis_client
 
 from users.routers.auth_token import routers as auth_token
 from users.routers.roles import routers as roles
@@ -75,9 +75,8 @@ async def db_session_middleware(request: Request, call_next):
 # @app.post("/set_key_value")
 # async def set_key_value(key: str, value: str):
 #     # Set the key-value pair in Redis with an expiry time of 5 minutes
-#     redis_client.set(key, value, ex=5)
-#
-#     return {"message": "Key-value pair set successfully"}
+#     foo = redis_client.set(key, value, ex=300)
+#     return {"message": "Key-value pair set successfully for 5 mins"}
 #
 #
 # @app.get("/get_value")
@@ -89,6 +88,7 @@ async def db_session_middleware(request: Request, call_next):
 #         return {"value": value.decode()}
 #     else:
 #         return {"message": "Key not found"}
+
 
 # users
 app.include_router(auth_token)

@@ -12,8 +12,7 @@ routers = APIRouter()
 
 
 @routers.get("/notifications", tags=["notifications"])
-async def get_notifications(page: Optional[int] = None,
-                            limit: Optional[int] = None,
+async def get_notifications(user_id: int,
                             db: Session = Depends(get_db)):
     """
     Get list of notifications\n
@@ -21,7 +20,7 @@ async def get_notifications(page: Optional[int] = None,
     *if offset and limit not None return notifications between offset and limit.*
     """
     try:
-        return NotificationService.get_notifications(db, page, limit)
+        return NotificationService.get_notifications(db, user_id)
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="get notification list error")

@@ -15,22 +15,15 @@ routers = APIRouter()
 async def get_all_roles(
         page: Optional[int] = None,
         limit: Optional[int] = None,
-        jwt: dict = Depends(JWTBearer()),
         db: Session = Depends(get_db)):
     """ Get list of roles """
-    if not check_permissions('get_roles', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return Role.get_list(page, limit, db)
 
 
 @routers.get("/role/{role_id}", tags=["roles"])
 async def get_role(role_id: int,
-                   jwt: dict = Depends(JWTBearer()),
                    db: Session = Depends(get_db)):
     """ get role by given id """
-    if not check_permissions('get_role', jwt):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Access denied")
-
     db_role = Role.get_by_id(db, role_id)
     if db_role is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")

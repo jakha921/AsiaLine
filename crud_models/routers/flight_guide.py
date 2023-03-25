@@ -12,15 +12,10 @@ from auth.auth_token.auth_handler import check_permissions, get_user_id
 routers = APIRouter()
 
 
-# region FlightGuide
 @routers.get("/flight_guide", response_model=list[schemas.FlightGuide], tags=["flight_guide"])
 async def get_flight_guide(page: Optional[int] = None,
                            limit: Optional[int] = None,
-                           # jwt: dict = Depends(JWTBearer()),
                            db: Session = Depends(get_db)):
-    # if not check_permissions("get_flight_guide", jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         return FlightGuide.get_list(db, page, limit)
     except Exception as e:
@@ -30,11 +25,7 @@ async def get_flight_guide(page: Optional[int] = None,
 
 @routers.get("/flight_guide/{flight_guide_id}", tags=["flight_guide"])
 async def get_flight_guide(flight_guide_id: int,
-                           # jwt: dict = Depends(JWTBearer()),
                            db: Session = Depends(get_db)):
-    # if not check_permissions("get_flight_guide", jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         db_flight_guide = FlightGuide.get_by_id(db, flight_guide_id)
         if db_flight_guide is None:
@@ -49,10 +40,10 @@ async def get_flight_guide(flight_guide_id: int,
 
 @routers.post("/flight_guide", tags=["flight_guide"])
 async def create_flight_guide(flight_guide: schemas.FlightGuideCreate,
-                              # jwt: dict = Depends(JWTBearer()),
+                              jwt: dict = Depends(JWTBearer()),
                               db: Session = Depends(get_db)):
-    # if not check_permissions("create_flight_guide", jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if not check_permissions("create_flight_guide", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
         if flight_guide.from_airport_id == flight_guide.to_airport_id:
@@ -71,10 +62,10 @@ async def create_flight_guide(flight_guide: schemas.FlightGuideCreate,
 @routers.patch("/flight_guide/{flight_guide_id}", tags=["flight_guide"])
 async def update_flight_guide(flight_guide_id: int,
                               flight_guide: schemas.FlightGuideCreate,
-                              # jwt: dict = Depends(JWTBearer()),
+                              jwt: dict = Depends(JWTBearer()),
                               db: Session = Depends(get_db)):
-    # if not check_permissions("update_flight_guide", jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if not check_permissions("update_flight_guide", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
         if flight_guide.from_airport_id == flight_guide.to_airport_id:
@@ -93,10 +84,10 @@ async def update_flight_guide(flight_guide_id: int,
 
 @routers.delete("/flight_guide/{flight_guide_id}", tags=["flight_guide"])
 async def delete_flight_guide(flight_guide_id: int,
-                              # jwt: dict = Depends(JWTBearer()),
+                              jwt: dict = Depends(JWTBearer()),
                               db: Session = Depends(get_db)):
-    # if not check_permissions("delete_flight_guide", jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+    if not check_permissions("delete_flight_guide", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
 
     try:
         db_flight_guide = FlightGuide.get_by_id(db, flight_guide_id)
@@ -108,4 +99,3 @@ async def delete_flight_guide(flight_guide_id: int,
     except Exception as e:
         print(logging.error(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Bad request")
-# endregion

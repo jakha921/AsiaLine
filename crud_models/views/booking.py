@@ -73,6 +73,11 @@ class Booking:
             db.refresh(db_booking)
 
             # add history
+            query = db.query(models.User.username, models.FlightGuide.flight_number). \
+                filter(models.User.id == user_id,
+                       models.FlightGuide.id == flight.flight_guide_id).first()
+            print("query: ", query)
+            print(f'For agent {db_booking.agent_id} created booking for flight {db_booking.flight_id}')
             History.create(db, user_id=user_id, action='create booking',
                            extra_info=f'Booking {db_booking.id} created')
 

@@ -19,11 +19,10 @@ async def get_agents(db: Session = Depends(get_db),
                      agent_id: Optional[int] = None,
                      page: Optional[int] = None,
                      limit: Optional[int] = None,
-                     # jwt: dict = Depends(JWTBearer())
-                     ):
+                     jwt: dict = Depends(JWTBearer())):
     """ Get all agents and their discounts """
-    # if not check_permissions('agents_main', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_agents', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         db_agents, counter = agents.get_agents_discounts(db, agent_id, page, limit, searching_text)
         return {
@@ -37,15 +36,14 @@ async def get_agents(db: Session = Depends(get_db),
 
 
 @routers.get("/agents/discounts")
-async def get_discounts(db: Session = Depends(get_db),
-                        searching_text: Optional[str] = None,
+async def get_discounts(searching_text: Optional[str] = None,
                         page: Optional[int] = None,
                         limit: Optional[int] = None,
-                        # jwt: dict = Depends(JWTBearer())
-                        ):
+                        jwt: dict = Depends(JWTBearer()),
+                        db: Session = Depends(get_db)):
     """ get all discounts that can be assigned to agents """
-    # if not check_permissions('agents_discounts', jwt):
-    #     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    if not check_permissions('get_discounts', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     try:
         agent_discount, counter = agents.get_discounts(db, searching_text, page, limit)
         return {

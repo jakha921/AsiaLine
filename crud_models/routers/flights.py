@@ -18,16 +18,12 @@ routers = APIRouter()
 @routers.get("/flights", response_model=list[schemas.Flight], tags=["flights"])
 async def get_flights(page: Optional[int] = None,
                       limit: Optional[int] = None,
-                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
     """
     Get list of flights where departure date is greater than current date and flight is not deleted\n
     *if offset and limit None return all flights*\n
     *if offset and limit not None return flights between offset and limit.*
     """
-    if not check_permissions("get_flights", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         return Flight.get_list(db, page, limit)
     except Exception as e:
@@ -37,12 +33,8 @@ async def get_flights(page: Optional[int] = None,
 
 @routers.get("/flight/{flight_id}", tags=["flights"])
 async def get_flight(flight_id: int,
-                     jwt: dict = Depends(JWTBearer()),
                      db: Session = Depends(get_db)):
     """ Get flight by id if departure date is greater than current date and flight is not deleted """
-    if not check_permissions("get_flight", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         db_flight = Flight.get_by_id(db, flight_id)
         if db_flight is None:
@@ -169,11 +161,8 @@ async def delete_flight(flight_id: int,
 
 @routers.get("/flight/{flight_id}/tickets", tags=["flights"])
 async def get_flight_tickets(flight_id: int,
-                             jwt: dict = Depends(JWTBearer()),
                              db: Session = Depends(get_db)):
     """ Get all tickets of flight by id """
-    if not check_permissions("get_flight_tickets", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     try:
         tickets = Flight.get_flight_tickets(db, flight_id)
         if not tickets:
@@ -212,12 +201,8 @@ async def set_flight_for_sale(flight_id: int,
 async def get_flight_price_history_by_flight_id(flight_id: int,
                                                 page: Optional[int] = None,
                                                 limit: Optional[int] = None,
-                                                jwt: dict = Depends(JWTBearer()),
                                                 db: Session = Depends(get_db)):
     """ Get flight ID and return list of flight price history for this flight """
-    if not check_permissions("get_flight_prices", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         return FlightPriceHistory.get_by_flight_id(db, flight_id, page, limit)
     except Exception as e:

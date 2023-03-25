@@ -24,7 +24,7 @@ async def get_flights_and_search(db: Session = Depends(get_db),
                                  jwt: dict = Depends(JWTBearer())
                                  ):
     """ Get flights and search by text """
-    if not check_permissions('main_page', jwt):
+    if not check_permissions('get_flights_main', jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_flights, counter = get_flights_by_range_date(db, from_date=from_date, to_date=to_date, page=page, limit=limit,
                                                     search_text=searching_text, is_on_sale=False)
@@ -64,7 +64,7 @@ async def get_queue_flights(db: Session = Depends(get_db),
                             jwt: dict = Depends(JWTBearer())
                             ):
     """ Get all flights where on sale date >= now """
-    if not check_permissions('flights_queue', jwt):
+    if not check_permissions('get_flights_queue', jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     db_flights, counter = get_flights_by_range_date(db, from_date=from_date, to_date=to_date, page=page, limit=limit,
@@ -89,7 +89,7 @@ async def get_flight_quotas(db: Session = Depends(get_db),
                             jwt: dict = Depends(JWTBearer())
                             ):
     """ get all flight quotes """
-    if not check_permissions('flights_quotas', jwt):
+    if not check_permissions('get_flights_quotas', jwt):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     db_flights, counter = get_flight_quotes(db, flight_id=flight_id, from_date=from_date, to_date=to_date, page=page,
                                             limit=limit,

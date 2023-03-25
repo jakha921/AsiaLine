@@ -17,21 +17,14 @@ routers = APIRouter()
 async def get_users_list(
         page: Optional[int] = None,
         limit: Optional[int] = None,
-        jwt: dict = Depends(JWTBearer()),
         db: Session = Depends(get_db)):
-    if not check_permissions('get_users', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return User.get_list(page, limit, db)
 
 
 @routers.get("/user/{user_id}", tags=["users"])
 async def get_user(
         user_id: int,
-        jwt: dict = Depends(JWTBearer()),
         db: Session = Depends(get_db)):
-    if not check_permissions('get_user', jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
     try:
         if user := User.get_by_id(db, user_id):
             return schemas.User.from_orm(user)

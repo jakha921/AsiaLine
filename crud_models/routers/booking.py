@@ -18,15 +18,11 @@ routers = APIRouter()
 @routers.get("/bookings", response_model=list[schemas.Booking], tags=["bookings"])
 async def get_bookings(page: Optional[int] = None,
                        limit: Optional[int] = None,
-                       jwt: dict = Depends(JWTBearer()),
                        db: Session = Depends(get_db)):
     """
     Get bookings list where booking is not deleted and flight departure date is greater than current date and
     flight is not deleted
     """
-    if not check_permissions("get_bookings", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
-
     try:
         return Booking.get_list(db, page, limit)
     except Exception as e:
@@ -36,14 +32,11 @@ async def get_bookings(page: Optional[int] = None,
 
 @routers.get("/booking/{booking_id}", tags=["bookings"])
 async def get_booking(booking_id: int,
-                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
     """
     Get booking by id where booking is not deleted and flight departure date is greater than current date and
     flight is not deleted
     """
-    if not check_permissions("get_booking", jwt):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
     try:
         db_booking = Booking.get_by_id(db, booking_id)
         if db_booking is None:

@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 
+from auth.auth_token.auth_bearer import JWTBearer
+from auth.auth_token.auth_handler import check_permissions
 from crud_models.views.countries import Country
 from db.database import get_db
 from crud_models.schemas import cities as schemas
@@ -45,8 +47,12 @@ async def get_city(city_id: int,
 
 @routers.post("/city", tags=["cities"])
 async def create_city(city: schemas.CityCreate,
+                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
     """ Create new city """
+    if not check_permissions('create_city', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         if not Country.get_by_id(db, city.country_id):
             raise ValueError("Country not found")
@@ -61,12 +67,16 @@ async def create_city(city: schemas.CityCreate,
 @routers.patch("/city/{city_id}", tags=["cities"])
 async def update_city(city_id: int,
                       city: schemas.CityUpdate,
+                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
     """
     Update city by id\n
     **Optional fields**:\n
     *all fields*
     """
+    if not check_permissions('update_city', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         db_city = City.get_by_id(db, city_id)
         if db_city is None:
@@ -83,8 +93,12 @@ async def update_city(city_id: int,
 
 @routers.delete("/city/{city_id}", tags=["cities"])
 async def delete_city(city_id: int,
+                      jwt: dict = Depends(JWTBearer()),
                       db: Session = Depends(get_db)):
     """ Delete city by id """
+    if not check_permissions('delete_city', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         db_city = City.get_by_id(db, city_id)
         if db_city is None:

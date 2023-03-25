@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 
+from auth.auth_token.auth_bearer import JWTBearer
+from auth.auth_token.auth_handler import check_permissions
 from db.database import get_db
 from crud_models.schemas import countries as schemas
 from crud_models.views.countries import Country
@@ -45,8 +47,12 @@ async def get_country(country_id: int,
 
 @routers.post("/country", tags=["countries"])
 async def create_country(country: schemas.CountryCreate,
+                         jwt: dict = Depends(JWTBearer()),
                          db: Session = Depends(get_db)):
     """ Create new country """
+    if not check_permissions('create_country', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         return schemas.Country.from_orm(Country.create(db, country))
     except Exception as e:
@@ -57,12 +63,16 @@ async def create_country(country: schemas.CountryCreate,
 @routers.patch("/country/{country_id}", tags=["countries"])
 async def update_country(country_id: int,
                          country: schemas.CountryUpdate,
+                         jwt: dict = Depends(JWTBearer()),
                          db: Session = Depends(get_db)):
     """
     Update country by id\n
     **Optional fields**:\n
     *all fields*
     """
+    if not check_permissions('update_country', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         db_country = Country.get_by_id(db, country_id)
         if db_country is None:
@@ -77,8 +87,12 @@ async def update_country(country_id: int,
 
 @routers.delete("/country/{country_id}", tags=["countries"])
 async def delete_country(country_id: int,
+                         jwt: dict = Depends(JWTBearer()),
                          db: Session = Depends(get_db)):
     """ Delete country by id """
+    if not check_permissions('update_country', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         db_country = Country.get_by_id(db, country_id)
         if db_country is None:

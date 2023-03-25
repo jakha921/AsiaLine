@@ -21,7 +21,11 @@ routers = APIRouter()
 async def get_countries(db: Session = Depends(get_db),
                         searching_text: Optional[str] = None,
                         page: Optional[int] = None,
+                        jwt: dict = Depends(JWTBearer()),
                         limit: Optional[int] = None):
+    if not check_permissions("get_countries", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         db_countries, counter = Country.get_countries(db, page, limit, searching_text)
         return {
@@ -37,7 +41,11 @@ async def get_countries(db: Session = Depends(get_db),
 async def get_cities(db: Session = Depends(get_db),
                      searching_text: Optional[str] = None,
                      page: Optional[int] = None,
+                     jwt: dict = Depends(JWTBearer()),
                      limit: Optional[int] = None):
+    if not check_permissions("get_cities", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         db_cities, counter = City.get_with_countries(db, page, limit, searching_text)
         return {
@@ -53,7 +61,11 @@ async def get_cities(db: Session = Depends(get_db),
 async def get_airports(db: Session = Depends(get_db),
                        searching_text: Optional[str] = None,
                        page: Optional[int] = None,
+                       jwt: dict = Depends(JWTBearer()),
                        limit: Optional[int] = None):
+    if not check_permissions("get_airports", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         db_airports, counter = Airport.get_with_cities(db, page, limit, searching_text)
         return {
@@ -69,7 +81,11 @@ async def get_airports(db: Session = Depends(get_db),
 async def get_companies(db: Session = Depends(get_db),
                         searching_text: Optional[str] = None,
                         page: Optional[int] = None,
+                        jwt: dict = Depends(JWTBearer()),
                         limit: Optional[int] = None):
+    if not check_permissions("get_airlines", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         db_companies, counter = Company.get_list(db, page, limit, searching_text)
         return {
@@ -85,7 +101,11 @@ async def get_companies(db: Session = Depends(get_db),
 async def get_flight_guide(db: Session = Depends(get_db),
                            searching_text: Optional[str] = None,
                            page: Optional[int] = None,
+                           jwt: dict = Depends(JWTBearer()),
                            limit: Optional[int] = None):
+    if not check_permissions("get_flight_guides", jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     try:
         db_companies, counter = FlightGuide.get_detail_flight_guide(db, page, limit, searching_text)
         return {

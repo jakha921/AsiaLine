@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import logging
 
+from auth.auth_token.auth_bearer import JWTBearer
+from auth.auth_token.auth_handler import check_permissions
 from crud_models.views.cities import City
 from db.database import get_db
 from crud_models.schemas import airports as schemas
@@ -44,8 +46,13 @@ async def get_airport(airport_id: int,
 
 
 @routers.post("/airport", tags=["airports"])
-async def create_airport(airport: schemas.AirportCreate, db: Session = Depends(get_db)):
+async def create_airport(airport: schemas.AirportCreate,
+                         jwt: dict = Depends(JWTBearer()),
+                         db: Session = Depends(get_db)):
     """ Create new airport """
+    if not check_permissions('create_airport', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         if City.get_by_id(db, airport.city_id) is None:
             raise ValueError("City not found")
@@ -58,12 +65,18 @@ async def create_airport(airport: schemas.AirportCreate, db: Session = Depends(g
 
 
 @routers.patch("/airport/{airport_id}", tags=["airports"])
-async def update_airport(airport_id: int, airport: schemas.AirportUpdate, db: Session = Depends(get_db)):
+async def update_airport(airport_id: int,
+                         airport: schemas.AirportUpdate,
+                         jwt: dict = Depends(JWTBearer()),
+                         db: Session = Depends(get_db)):
     """
     Update airport by id\n
     **Optional fields**:\n
     *all fields*
     """
+    if not check_permissions('update_airport', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         db_airport = Airport.get_by_id(db, airport_id)
         if db_airport is None:
@@ -79,8 +92,13 @@ async def update_airport(airport_id: int, airport: schemas.AirportUpdate, db: Se
 
 
 @routers.delete("/airport/{airport_id}", tags=["airports"])
-async def delete_airport(airport_id: int, db: Session = Depends(get_db)):
+async def delete_airport(airport_id: int,
+                         jwt: dict = Depends(JWTBearer()),
+                         db: Session = Depends(get_db)):
     """ Delete airport by id """
+    if not check_permissions('delete_airport', jwt):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     try:
         db_airport = Airport.get_by_id(db, airport_id)
         if db_airport is None:
