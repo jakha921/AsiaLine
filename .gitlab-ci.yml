@@ -1,0 +1,63 @@
+variables:
+  DOCKERFILE: Dockerfile
+  TAG: $CI_COMMIT_REF_NAME-$CI_COMMIT_SHORT_SHA-$(date +%s)
+stages:
+  - build-push
+  - deploy-to-k8s
+
+build-docker:
+  image: docker
+  stage: build-push
+  services:
+    - docker:dind
+  only:
+    - main
+    - staging
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    - |-
+      if [[ $CI_COMMIT_REF_NAME == 'staging' ]]; then
+        TAG=staging-$CI_COMMIT_SHORT_SHA
+      elif [[ $CI_COMMIT_REF_NAME == 'main' ]]; then
+        TAG=main-$CI_COMMIT_SHORT_SHA
+      fi
+    - echo -e "  Image name is $CI_REGISTRY_IMAGE:$TAG"
+
+  script:
+    - docker build -t $CI_REGISTRY_IMAGE:$TAG --file $DOCKERFILE --build-arg CI_JOB_TOKEN=$CI_JOB_TOKEN .
+    - docker push $CI_REGISTRY_IMAGE:$TAG
+
+deploy-to-stage:
+  image: n0mads/kubectl-helm-doctl
+  stage: deploy-to-k8s
+  only:
+    - staging
+  script:
+    - |
+      doctl auth init --access-token $DIGITAL_OCEAN_TOKEN
+      mkdir -p /root/.kube
+      doctl kubernetes cluster kubeconfig save avialine-k8s
+      kubectl config use-context  do-sgp1-avialine-k8s
+    - |
+      sh -c "helm upgrade --install avialine .helm -n staging \
+      --set image.tag=staging-$CI_COMMIT_SHORT_SHA \
+      --set ingress.host=apitest.asialine.ru \
+      --debug"
+deploy-to-production:
+  image: n0mads/kubectl-helm-doctl
+  stage: deploy-to-k8s
+  only:
+    - main
+  script:
+    - |
+      doctl auth init --access-token $DIGITAL_OCEAN_TOKEN
+      mkdir -p /root/.kube
+      doctl kubernetes cluster kubeconfig save avialine-k8s
+      kubectl config use-context  do-sgp1-avialine-k8s
+    - |
+      sh -c "helm upgrade --install avialine .helm -n production \
+      --set image.tag=main-$CI_COMMIT_SHORT_SHA \
+      --set affinity=production-nodes \
+      --set tolerations=production-nodes \
+      --set ingress.host=api.asialine.ru \
+      --debug"
